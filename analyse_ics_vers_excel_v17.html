@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyse ICS vers Excel</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --accent2: #1d4ed8;
+      --ok: #047857;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Segoe UI, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.06);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 10px; font-size: 22px; }
+    p { margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .pill {
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#eef2ff;
+      font-size:12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+    @media (max-width: 900px) {
+      .grid, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type="file"], input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      font-family: inherit;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .primary { background: var(--accent); color: white; }
+    .primary:hover { background: var(--accent2); }
+    .secondary { background: #e5e7eb; color: #111827; }
+    .danger { background: #fee2e2; color: #991b1b; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafafa;
+    }
+    .stat .k {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .stat .v {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .substats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      position: sticky;
+      top: 0;
+    }
+    .table-wrap {
+      max-height: 420px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: #92400e; font-weight: 600; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .param-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      cursor:pointer;
+      user-select:none;
+      gap:12px;
+    }
+    .param-title-wrap {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .chevron {
+      display:inline-block;
+      transition:transform .2s ease;
+      font-size:18px;
+      line-height:1;
+    }
+    .chevron.open {
+      transform:rotate(90deg);
+    }
+    .param-body {
+      display:none;
+      margin-top:16px;
+    }
+    .param-body.open {
+      display:block;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Analyse ICS → Excel</h1>
+      <p class="muted">Chargez un fichier <code>.ics</code>, indiquez le nombre de mois à analyser, puis générez un fichier Excel <code>.xls</code> contenant les rendez-vous business.</p>
+      <p class="muted small">Règle de période : <strong>X mois pleins + mois en cours</strong>. Exemple : 3 = événements à partir du 1er jour du mois situé 3 mois avant le mois courant.</p>
+      <div class="grid">
+        <div>
+          <label for="icsFile">Fichier ICS</label>
+          <input id="icsFile" type="file" accept=".ics,text/calendar" />
+        </div>
+        <div>
+          <label for="months">Nombre de mois à analyser</label>
+          <input id="months" type="number" min="1" max="36" value="6" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="analyzeBtn">Analyser</button>
+        <button class="secondary" id="downloadBtn" disabled>Télécharger le fichier Excel</button>
+      </div>
+      <p id="status" class="muted" style="margin-top:12px;">En attente d’un fichier.</p>
+      <p id="debug" class="muted small"></p>
+      <div class="stats" id="stats" style="display:none;">
+        <div class="stat"><div class="k">Événements business</div><div class="v" id="statEvents">0</div></div>
+        <div class="stat"><div class="k">Entreprises</div><div class="v" id="statCompanies">0</div></div>
+        <div class="stat"><div class="k">Temps total</div><div class="v" id="statHours">0 h</div></div>
+        <div class="stat"><div class="k">Période analysée</div><div class="v" id="statPeriod">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="param-header" id="toggleSettingsBtn">
+        <div class="param-title-wrap">
+          <span class="chevron" id="settingsChevron">▶</span>
+          <h2 style="margin:0;">Paramétrage</h2>
+        </div>
+        <span class="muted small">Cliquer pour afficher / masquer</span>
+      </div>
+      <div class="param-body" id="settingsBody">
+
+
+    <div class="card">
+      <h2>Table des clients</h2>
+      <p class="muted">Toute entreprise absente de cette table est considérée par défaut comme <strong>Editeur</strong>. <span class="pill">Client</span></p>
+      <div class="actions" style="margin-top:0; margin-bottom:12px;">
+        <button class="secondary" id="toggleMapBtn">Afficher la table des clients</button>
+        <button class="secondary" id="resetMapBtn">Réinitialiser la table par défaut</button>
+      </div>
+      <div id="mappingPanel" style="display:none;">
+        <div class="grid-3">
+          <div>
+            <label for="mapEntreprise">Entreprise</label>
+            <input id="mapEntreprise" type="text" placeholder="Ex : COGEP" />
+          </div>
+          <div>
+            <label for="mapType">Type d’entreprise</label>
+            <select id="mapType">
+              <option value="Client">Client</option>
+            </select>
+          </div>
+          <div class="actions" style="margin-top:0;">
+            <button class="primary" id="addMapBtn">Ajouter / Mettre à jour</button>
+            <button class="secondary" id="exportMapBtn" style="display:none;">Exporter la table</button>
+            <button class="secondary" id="importMapBtn">Importer la table</button>
+          </div>
+        </div>
+        <input id="mapImportFile" type="file" accept=".json" style="display:none;" />
+        <div class="table-wrap" style="margin-top:16px;">
+          <table id="mappingTable">
+            <thead>
+              <tr><th>Entreprise</th><th>Type d’entreprise</th><th>Action</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Table des exclusions</h2>
+      <p class="muted">Les exclusions sont testées sur le <strong>titre + la description</strong>, avec recherche par <strong>mot entier</strong> pour éviter les faux positifs.</p>
+      <div class="actions" style="margin-top:0; margin-bottom:12px;">
+        <button class="secondary" id="toggleExBtn">Afficher la table des exclusions</button>
+        <button class="secondary" id="resetExBtn">Réinitialiser la table par défaut</button>
+      </div>
+      <div id="exclusionPanel" style="display:none;">
+        <div class="grid-3">
+          <div>
+            <label for="exclusionValue">Exclusion</label>
+            <input id="exclusionValue" type="text" placeholder="Ex : congés, vacances, déplacement" />
+          </div>
+          <div>
+            <label for="exclusionMode">Mode</label>
+            <select id="exclusionMode">
+              <option value="word">Mot entier</option>
+              <option value="phrase">Expression</option>
+            </select>
+          </div>
+          <div class="actions" style="margin-top:0;">
+            <button class="primary" id="addExBtn">Ajouter / Mettre à jour</button>
+            <button class="secondary" id="exportExBtn" style="display:none;">Exporter la table</button>
+            <button class="secondary" id="importExBtn">Importer la table</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+        <input id="exImportFile" type="file" accept=".json" style="display:none;" />
+        <div class="table-wrap" style="margin-top:16px;">
+          <table id="exclusionTable">
+            <thead>
+              <tr><th>Valeur</th><th>Mode</th><th>Action</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" id="analysisBlocks" style="display:none;">
+      <div class="card">
+        <h2>Période passée</h2>
+        <p class="muted" id="pastLabel">Jusqu’à la date du jour</p>
+        <div class="substats">
+          <div class="stat"><div class="k">Rendez-vous</div><div class="v" id="pastEvents">0</div></div>
+          <div class="stat"><div class="k">Temps total</div><div class="v" id="pastHours">0 h</div></div>
+        </div>
+        <div class="table-wrap">
+          <table id="pastTable">
+            <thead>
+              <tr><th>Mois</th><th>Rendez-vous</th><th>Temps total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Période à venir</h2>
+        <p class="muted" id="futureLabel">Après la date du jour</p>
+        <div class="substats">
+          <div class="stat"><div class="k">Rendez-vous</div><div class="v" id="futureEvents">0</div></div>
+          <div class="stat"><div class="k">Temps total</div><div class="v" id="futureHours">0 h</div></div>
+        </div>
+        <div class="table-wrap">
+          <table id="futureTable">
+            <thead>
+              <tr><th>Mois</th><th>Rendez-vous</th><th>Temps total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const icsFile = document.getElementById('icsFile');
+    const monthsInput = document.getElementById('months');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusEl = document.getElementById('status');
+    const debugEl = document.getElementById('debug');
+    const stats = document.getElementById('stats');
+    const analysisBlocks = document.getElementById('analysisBlocks');
+
+    const mapEntrepriseInput = document.getElementById('mapEntreprise');
+    const addMapBtn = document.getElementById('addMapBtn');
+    const exportMapBtn = document.getElementById('exportMapBtn');
+    const importMapBtn = document.getElementById('importMapBtn');
+    const mapImportFile = document.getElementById('mapImportFile');
+    const toggleMapBtn = document.getElementById('toggleMapBtn');
+    const resetMapBtn = document.getElementById('resetMapBtn');
+    const mappingPanel = document.getElementById('mappingPanel');
+
+    const exclusionValueInput = document.getElementById('exclusionValue');
+    const exclusionModeSelect = document.getElementById('exclusionMode');
+    const addExBtn = document.getElementById('addExBtn');
+    const exportExBtn = document.getElementById('exportExBtn');
+    const importExBtn = document.getElementById('importExBtn');
+    const exImportFile = document.getElementById('exImportFile');
+    const toggleExBtn = document.getElementById('toggleExBtn');
+    const resetExBtn = document.getElementById('resetExBtn');
+    const exclusionPanel = document.getElementById('exclusionPanel');
+    const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+    const settingsBody = document.getElementById('settingsBody');
+    const settingsChevron = document.getElementById('settingsChevron');
+
+    let currentRows = [];
+
+    function loadSettingsVisible() {
+      try {
+        const saved = localStorage.getItem('icsSettingsVisible');
+        return saved === 'true';
+      } catch {
+        return false;
+      }
+    }
+
+    function saveSettingsVisible(value) {
+      localStorage.setItem('icsSettingsVisible', String(value));
+    }
+
+    let settingsVisible = loadSettingsVisible();
+
+    function updateSettingsUiState() {
+      settingsBody.classList.toggle('open', settingsVisible);
+      settingsChevron.classList.toggle('open', settingsVisible);
+    }
+
+    const defaultMapping = {
+      'COGEP': 'Client'
+    };
+
+    const defaultExclusions = [
+      { value: 'fête du travail', mode: 'phrase' },
+      { value: 'ascension', mode: 'word' },
+      { value: 'congé', mode: 'word' },
+      { value: 'congés', mode: 'word' },
+      { value: 'cp', mode: 'word' },
+      { value: 'vacances', mode: 'word' },
+      { value: 'déplacement', mode: 'word' },
+      { value: 'férié', mode: 'word' },
+      { value: 'anniversaire', mode: 'word' },
+      { value: 'ABS', mode: 'word' }
+    ];
+
+    let entrepriseMapping = loadMapping();
+    let exclusions = loadExclusions();
+    let mappingPanelVisible = loadPanelVisible('icsMappingPanelVisible', false);
+    let exclusionPanelVisible = loadPanelVisible('icsExclusionPanelVisible', false);
+
+    function normalizeKey(v) {
+      return String(v || '').trim().toUpperCase();
+    }
+
+    function normalizeExclusionKey(item) {
+      return `${String(item.value || '').trim().toLowerCase()}|${item.mode || 'word'}`;
+    }
+
+    function loadPanelVisible(key, defaultValue) {
+      try {
+        const saved = localStorage.getItem(key);
+        return saved === null ? defaultValue : saved === 'true';
+      } catch {
+        return defaultValue;
+      }
+    }
+
+    function savePanelVisible(key, value) {
+      localStorage.setItem(key, String(value));
+    }
+
+    function loadMapping() {
+      try {
+        const saved = localStorage.getItem('icsEntrepriseMapping');
+        if (!saved) return { ...defaultMapping };
+        return { ...defaultMapping, ...JSON.parse(saved) };
+      } catch {
+        return { ...defaultMapping };
+      }
+    }
+
+    function saveMapping() {
+      localStorage.setItem('icsEntrepriseMapping', JSON.stringify(entrepriseMapping));
+      updateMappingUiState();
+    }
+
+    function mappingsEqual(a, b) {
+      const ak = Object.keys(a).sort();
+      const bk = Object.keys(b).sort();
+      if (ak.length !== bk.length) return false;
+      for (let i = 0; i < ak.length; i++) {
+        if (ak[i] !== bk[i]) return false;
+        if (a[ak[i]] !== b[bk[i]]) return false;
+      }
+      return true;
+    }
+
+    function loadExclusions() {
+      try {
+        const saved = localStorage.getItem('icsExclusions');
+        if (!saved) return [...defaultExclusions];
+        const arr = JSON.parse(saved);
+        return Array.isArray(arr) ? arr : [...defaultExclusions];
+      } catch {
+        return [...defaultExclusions];
+      }
+    }
+
+    function saveExclusions() {
+      localStorage.setItem('icsExclusions', JSON.stringify(exclusions));
+      updateExclusionUiState();
+    updateSettingsUiState();
+    }
+
+    function exclusionsEqual(a, b) {
+      const aa = [...a].map(normalizeExclusionKey).sort();
+      const bb = [...b].map(normalizeExclusionKey).sort();
+      if (aa.length !== bb.length) return false;
+      for (let i = 0; i < aa.length; i++) {
+        if (aa[i] !== bb[i]) return false;
+      }
+      return true;
+    }
+
+    function escapeRegex(text) {
+      return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function updateMappingUiState() {
+      const isModified = !mappingsEqual(entrepriseMapping, defaultMapping);
+      exportMapBtn.style.display = isModified ? '' : 'none';
+      mappingPanel.style.display = mappingPanelVisible ? '' : 'none';
+      toggleMapBtn.textContent = mappingPanelVisible ? 'Masquer la table des clients' : 'Afficher la table des clients';
+    }
+
+    function updateExclusionUiState() {
+      const isModified = !exclusionsEqual(exclusions, defaultExclusions);
+      exportExBtn.style.display = isModified ? '' : 'none';
+      exclusionPanel.style.display = exclusionPanelVisible ? '' : 'none';
+      toggleExBtn.textContent = exclusionPanelVisible ? 'Masquer la table des exclusions' : 'Afficher la table des exclusions';
+    }
+
+    function renderMappingTable() {
+      const tbody = document.querySelector('#mappingTable tbody');
+      tbody.innerHTML = '';
+      Object.keys(entrepriseMapping).sort().forEach(key => {
+        if (entrepriseMapping[key] !== 'Client') return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${key}</td>
+          <td>${entrepriseMapping[key]}</td>
+          <td><button class="danger" data-key="${key}">Supprimer</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('button[data-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          delete entrepriseMapping[btn.dataset.key];
+          saveMapping();
+          renderMappingTable();
+        });
+      });
+
+      updateMappingUiState();
+    }
+
+    function renderExclusionTable() {
+      const tbody = document.querySelector('#exclusionTable tbody');
+      tbody.innerHTML = '';
+      [...exclusions]
+        .sort((a, b) => normalizeExclusionKey(a).localeCompare(normalizeExclusionKey(b)))
+        .forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.value}</td>
+            <td>${item.mode === 'phrase' ? 'Expression' : 'Mot entier'}</td>
+            <td><button class="danger" data-key="${normalizeExclusionKey(item)}">Supprimer</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      tbody.querySelectorAll('button[data-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          exclusions = exclusions.filter(item => normalizeExclusionKey(item) !== btn.dataset.key);
+          saveExclusions();
+          renderExclusionTable();
+        });
+      });
+
+      updateExclusionUiState();
+    updateSettingsUiState();
+    }
+
+    addMapBtn.addEventListener('click', () => {
+      const key = normalizeKey(mapEntrepriseInput.value);
+      if (!key) return;
+      entrepriseMapping[key] = 'Client';
+      saveMapping();
+      renderMappingTable();
+      mapEntrepriseInput.value = '';
+    });
+
+    exportMapBtn.addEventListener('click', () => {
+      const clientsOnly = {};
+      Object.keys(entrepriseMapping).forEach(k => {
+        if (entrepriseMapping[k] === 'Client') clientsOnly[k] = 'Client';
+      });
+      const blob = new Blob([JSON.stringify(clientsOnly, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'table_clients.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    importMapBtn.addEventListener('click', () => mapImportFile.click());
+    mapImportFile.addEventListener('change', async () => {
+      const file = mapImportFile.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const next = { ...defaultMapping };
+        Object.keys(data).forEach(k => {
+          next[normalizeKey(k)] = 'Client';
+        });
+        entrepriseMapping = next;
+        saveMapping();
+        renderMappingTable();
+      } catch {
+        alert('Fichier JSON invalide.');
+      }
+      mapImportFile.value = '';
+    });
+
+    toggleSettingsBtn.addEventListener('click', () => {
+      settingsVisible = !settingsVisible;
+      saveSettingsVisible(settingsVisible);
+      updateSettingsUiState();
+    });
+
+    toggleMapBtn.addEventListener('click', () => {
+      mappingPanelVisible = !mappingPanelVisible;
+      savePanelVisible('icsMappingPanelVisible', mappingPanelVisible);
+      updateMappingUiState();
+    });
+
+    resetMapBtn.addEventListener('click', () => {
+      entrepriseMapping = { ...defaultMapping };
+      saveMapping();
+      renderMappingTable();
+    });
+
+    addExBtn.addEventListener('click', () => {
+      const value = String(exclusionValueInput.value || '').trim();
+      const mode = exclusionModeSelect.value;
+      if (!value) return;
+
+      const key = normalizeExclusionKey({ value, mode });
+      exclusions = exclusions.filter(item => normalizeExclusionKey(item) !== key);
+      exclusions.push({ value, mode });
+      saveExclusions();
+      renderExclusionTable();
+      exclusionValueInput.value = '';
+      exclusionModeSelect.value = 'word';
+    });
+
+    exportExBtn.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(exclusions, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'table_exclusions.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    importExBtn.addEventListener('click', () => exImportFile.click());
+    exImportFile.addEventListener('change', async () => {
+      const file = exImportFile.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error();
+        exclusions = data
+          .map(item => ({
+            value: String(item.value || '').trim(),
+            mode: item.mode === 'phrase' ? 'phrase' : 'word'
+          }))
+          .filter(item => item.value);
+        saveExclusions();
+        renderExclusionTable();
+      } catch {
+        alert('Fichier JSON invalide.');
+      }
+      exImportFile.value = '';
+    });
+
+    toggleExBtn.addEventListener('click', () => {
+      exclusionPanelVisible = !exclusionPanelVisible;
+      savePanelVisible('icsExclusionPanelVisible', exclusionPanelVisible);
+      updateExclusionUiState();
+    updateSettingsUiState();
+    });
+
+    resetExBtn.addEventListener('click', () => {
+      exclusions = [...defaultExclusions];
+      saveExclusions();
+      renderExclusionTable();
+    });
+
+    function unfoldICS(text) {
+      return String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n[ \t]/g, '');
+    }
+
+    function escXml(v) {
+      return String(v ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&apos;');
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function formatDate(d) { return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+    function formatTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+    function hoursFromMs(ms) { return `${(ms / 3600000).toFixed(1)} h`; }
+
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '';
+      const totalMin = Math.round(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h && m) return `${h}h${pad(m)}`;
+      if (h) return `${h}h`;
+      return `${m} min`;
+    }
+
+    function monthLabel(d) {
+      const str = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(d);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function parseICalDate(raw) {
+      if (!raw) return null;
+      const val = raw.trim();
+      if (/^\d{8}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        return new Date(y, mo, d, 0, 0, 0, 0);
+      }
+      if (/^\d{8}T\d{6}Z$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13), s = +val.slice(13,15);
+        return new Date(Date.UTC(y, mo, d, h, mi, s));
+      }
+      if (/^\d{8}T\d{6}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13), s = +val.slice(13,15);
+        return new Date(y, mo, d, h, mi, s, 0);
+      }
+      if (/^\d{8}T\d{4}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13);
+        return new Date(y, mo, d, h, mi, 0, 0);
+      }
+      return null;
+    }
+
+    function parseEventBlock(block) {
+      const event = {};
+      const lines = String(block || '').split('\n');
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+        if (!line) continue;
+
+        const idx = line.indexOf(':');
+        if (idx === -1) continue;
+
+        const left = line.slice(0, idx).trim();
+        const value = line.slice(idx + 1);
+        const fieldName = left.split(';')[0].toUpperCase();
+
+        if (!(fieldName in event)) {
+          event[fieldName] = value;
+        }
+      }
+
+      return event;
+    }
+
+    function cleanText(v) {
+      return String(v || '')
+        .replace(/\\n/g, '\n')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\:/g, ':')
+        .trim();
+    }
+
+    function prettifyDomain(domain) {
+      const base = domain.replace(/^www\./i, '').split('.');
+      const core = base.length > 1 ? base[base.length - 2] : base[0];
+      if (!core) return '';
+      const aliases = {
+        qonto:'Qonto',
+        smartisi:'Smartisi',
+        agicap:'Agicap',
+        chift:'Chift',
+        yooz:'Yooz',
+        sellsy:'Sellsy',
+        cecurity:'Cecurity',
+        vikta:'Vikta',
+        comptasecure:'ComptaSecure',
+        dext:'DEXT',
+        cogep:'COGEP',
+        fidextra:'FIDEXTRA',
+        leanpay:'LeanPay',
+        enso:'Enso',
+        datatalks:'Data Talks'
+      };
+      return aliases[core.toLowerCase()] || core.charAt(0).toUpperCase() + core.slice(1).toLowerCase();
+    }
+
+    function inferCompany(description, summary) {
+      const desc = cleanText(description);
+
+      let m = desc.match(/votre entreprise\s*:\s*([^\n]+)/i);
+      if (m) return m[1].trim();
+
+      m = desc.match(/nom de l'entreprise\s*:\s*([^\n]+)/i);
+      if (m) return m[1].trim();
+
+      m = desc.match(/email de l'invité\s*:\s*([^\s\n]+)/i);
+      if (m) {
+        const email = m[1].trim().toLowerCase();
+        const domain = email.split('@')[1] || '';
+        if (domain) return prettifyDomain(domain);
+      }
+
+      const emailMatches = [...desc.matchAll(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/gi)];
+      if (emailMatches.length) return prettifyDomain(emailMatches[0][1].toLowerCase());
+
+      const s = cleanText(summary);
+      if (/agicap/i.test(s)) return 'Agicap';
+      if (/regate/i.test(s)) return 'Regate';
+      if (/qonto/i.test(s)) return 'Qonto';
+      if (/comptasecure/i.test(s)) return 'ComptaSecure';
+      if (/chift/i.test(s)) return 'Chift';
+      if (/vikta/i.test(s)) return 'Vikta';
+      if (/leans?pay/i.test(s)) return 'LeanPay';
+      if (/enso rse/i.test(s)) return 'Enso RSE';
+      if (/smartisi/i.test(s)) return 'Smartisi';
+      if (/agicap\s*&\s*acd/i.test(s)) return 'Agicap';
+      if (/acd\s*-\s*regate/i.test(s)) return 'Regate';
+
+      return '';
+    }
+
+    function getEntrepriseType(entreprise) {
+      const key = normalizeKey(entreprise || 'Interne');
+      if (key === 'INTERNE') return 'Interne';
+      if (entrepriseMapping[key] === 'Client') return 'Client';
+      return 'Editeur';
+    }
+
+    function inferType(summary, description, company) {
+      const s = (cleanText(summary) + " " + cleanText(description) + " " + company).toLowerCase();
+      if (/point|suivi|faisons le point/.test(s)) return 'Suivi';
+      if (/api|endpoint|uuid|ged|interconnexion|connecteur|connexion api/.test(s)) return 'Technique API';
+      if (/partenariat|partner|qonto|regate|comptasecure|chift|agicap/.test(s)) return 'Partenariat';
+      if (/webinar|webinaire|livestorm/.test(s)) return 'Webinar / marketing';
+      return 'Autre';
+    }
+
+    function isExcludedByRules(text) {
+      const t = cleanText(text).toLowerCase();
+      return exclusions.some(item => {
+        const value = String(item.value || '').trim().toLowerCase();
+        if (!value) return false;
+        if (item.mode === 'phrase') {
+          return t.includes(value);
+        }
+        const re = new RegExp(`\\b${escapeRegex(value)}\\b`, 'i');
+        return re.test(t);
+      });
+    }
+
+    function isBusinessEvent(summary, description, start, end) {
+      const text = `${cleanText(summary)} ${cleanText(description)}`;
+      if (isExcludedByRules(text)) return false;
+      if (!start) return false;
+      if (end && (end - start) >= (24 * 60 * 60 * 1000)) return false;
+      return true;
+    }
+
+    function computeWindowStart(monthsToAnalyze) {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth() - Number(monthsToAnalyze || 6), 1, 0, 0, 0, 0);
+    }
+
+    function summarizeByMonth(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const key = `${r.start.getFullYear()}-${pad(r.start.getMonth()+1)}`;
+        if (!map.has(key)) {
+          map.set(key, { month: monthLabel(r.start), count: 0, ms: 0 });
+        }
+        const item = map.get(key);
+        item.count += 1;
+        item.ms += r.end ? Math.max(0, r.end - r.start) : 0;
+      });
+      return Array.from(map.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([, v]) => v);
+    }
+
+    function parseEvents(icsText, monthsToAnalyze) {
+      const unfolded = unfoldICS(icsText);
+      const matches = [...unfolded.matchAll(/BEGIN:VEVENT\n([\s\S]*?)\nEND:VEVENT/g)];
+      const rawEvents = [];
+
+      for (const match of matches) {
+        const evt = parseEventBlock(match[1]);
+        rawEvents.push({
+          uid: evt.UID || '',
+          summary: evt.SUMMARY || '',
+          description: evt.DESCRIPTION || '',
+          start: parseICalDate(evt.DTSTART || ''),
+          end: parseICalDate(evt.DTEND || '')
+        });
+      }
+
+      const dated = rawEvents.filter(e => e.start).sort((a, b) => a.start - b.start);
+      const cutoff = computeWindowStart(monthsToAnalyze);
+      const now = new Date();
+
+      const afterDateFilter = dated.filter(e => e.start >= cutoff);
+      const business = afterDateFilter
+        .filter(e => isBusinessEvent(e.summary, e.description, e.start, e.end))
+        .map(e => {
+          const company = inferCompany(e.description, e.summary) || 'Interne';
+          return {
+            uid: e.uid,
+            start: e.start,
+            end: e.end,
+            date: formatDate(e.start),
+            heureDebut: formatTime(e.start),
+            duree: e.end ? formatDuration(e.end - e.start) : '',
+            dureeMinutes: e.end ? Math.round((e.end - e.start)/60000) : 0,
+            heureFin: e.end ? formatTime(e.end) : '',
+            entreprise: company,
+            typeEntreprise: getEntrepriseType(company),
+            sujet: cleanText(e.summary),
+            type: inferType(e.summary, e.description, company)
+          };
+        });
+
+      const dedup = [];
+      const seen = new Set();
+      for (const e of business) {
+        const key = `${e.uid}|${e.date}|${e.heureDebut}|${e.sujet}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          dedup.push(e);
+        }
+      }
+
+      const past = dedup.filter(e => e.start <= now);
+      const future = dedup.filter(e => e.start > now);
+
+      return {
+        rows: dedup,
+        past,
+        future,
+        pastSummary: summarizeByMonth(past),
+        futureSummary: summarizeByMonth(future),
+        totalEvents: dated.length,
+        filteredByDate: afterDateFilter.length,
+        veventCount: matches.length,
+        cutoff,
+        now,
+        maxFutureDate: future.length ? future.reduce((max, r) => r.start > max ? r.start : max, future[0].start) : null
+      };
+    }
+
+    function renderSummaryTable(rows, tbodySelector) {
+      const tbody = document.querySelector(tbodySelector);
+      tbody.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        [r.month, r.count, hoursFromMs(r.ms)].forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function totalMs(rows) {
+      return rows.reduce((sum, r) => sum + (r.end ? Math.max(0, r.end - r.start) : 0), 0);
+    }
+
+    function updateStats(result) {
+      const companies = new Set(result.rows.map(r => (r.entreprise || '').trim()).filter(Boolean));
+      document.getElementById('statEvents').textContent = result.rows.length;
+      document.getElementById('statCompanies').textContent = companies.size;
+      document.getElementById('statHours').textContent = hoursFromMs(totalMs(result.rows));
+      document.getElementById('statPeriod').textContent = `${formatDate(result.cutoff)} → ${formatDate(result.now)}`;
+
+      document.getElementById('pastEvents').textContent = result.past.length;
+      document.getElementById('pastHours').textContent = hoursFromMs(totalMs(result.past));
+      document.getElementById('futureEvents').textContent = result.future.length;
+      document.getElementById('futureHours').textContent = hoursFromMs(totalMs(result.future));
+      document.getElementById('pastLabel').textContent = `${formatDate(result.cutoff)} → ${formatDate(result.now)} (jusqu’à aujourd’hui)`;
+      document.getElementById('futureLabel').textContent = result.maxFutureDate
+        ? `Après le ${formatDate(result.now)} jusqu’au ${formatDate(result.maxFutureDate)}`
+        : `Après le ${formatDate(result.now)} : aucun rendez-vous`;
+
+      stats.style.display = 'grid';
+      analysisBlocks.style.display = 'grid';
+    }
+
+    function buildPivot(rows) {
+      const map = {};
+      rows.forEach(r => {
+        const key = `${r.entreprise || 'Interne'}|${r.typeEntreprise || 'Inconnu'}`;
+        if (!map[key]) {
+          map[key] = {
+            entreprise: r.entreprise || 'Interne',
+            typeEntreprise: r.typeEntreprise || 'Inconnu',
+            count: 0,
+            minutes: 0
+          };
+        }
+        map[key].count += 1;
+        map[key].minutes += r.dureeMinutes || 0;
+      });
+      return Object.values(map).sort((a,b)=>b.minutes-a.minutes);
+    }
+
+    function buildSpreadsheetXml(rows) {
+      const headers = ['Date','Heure début','Durée (min)','Heure fin','Entreprise','TypeEntreprise','Sujet','Type'];
+      const pivot = buildPivot(rows);
+
+      const xmlRows = [
+        '<Row>' + headers.map(h => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${escXml(h)}</Data></Cell>`).join('') + '</Row>'
+      ];
+
+      for (const r of rows) {
+        const values = [r.date, r.heureDebut, r.dureeMinutes, r.heureFin, r.entreprise, r.typeEntreprise, r.sujet, r.type];
+        xmlRows.push('<Row>' + values.map((v, idx) => {
+          const isNumber = idx === 2;
+          return `<Cell><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escXml(v || (isNumber ? 0 : ''))}</Data></Cell>`;
+        }).join('') + '</Row>');
+      }
+
+      const pivotRows = [
+        '<Row><Cell ss:StyleID="sHeader"><Data ss:Type="String">Entreprise</Data></Cell>' +
+        '<Cell ss:StyleID="sHeader"><Data ss:Type="String">TypeEntreprise</Data></Cell>' +
+        '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Nombre de RDV</Data></Cell>' +
+        '<Cell ss:StyleID="sHeader"><Data ss:Type="String">Durée totale (min)</Data></Cell></Row>'
+      ];
+
+      pivot.forEach(p => {
+        pivotRows.push('<Row>' +
+          '<Cell><Data ss:Type="String">' + escXml(p.entreprise) + '</Data></Cell>' +
+          '<Cell><Data ss:Type="String">' + escXml(p.typeEntreprise) + '</Data></Cell>' +
+          '<Cell><Data ss:Type="Number">' + p.count + '</Data></Cell>' +
+          '<Cell><Data ss:Type="Number">' + p.minutes + '</Data></Cell>' +
+        '</Row>');
+      });
+
+      return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal"><Font ss:FontName="Segoe UI" ss:Size="10"/></Style>
+  <Style ss:ID="sHeader"><Font ss:Bold="1" ss:FontName="Segoe UI" ss:Size="10"/><Interior ss:Color="#D9E7FF" ss:Pattern="Solid"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Rendez-vous business">
+  <Table>
+   <Column ss:Width="80"/><Column ss:Width="75"/><Column ss:Width="80"/><Column ss:Width="75"/><Column ss:Width="120"/><Column ss:Width="110"/><Column ss:Width="280"/><Column ss:Width="130"/>
+   ${xmlRows.join('')}
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Synthese par entreprise">
+  <Table>
+    <Column ss:Width="150"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/>
+    ${pivotRows.join('')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+    }
+
+    function downloadExcel(rows) {
+      const xml = buildSpreadsheetXml(rows);
+      const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const months = Number(monthsInput.value || 6);
+      a.href = url;
+      a.download = `rendez_vous_business_${months}_mois.xls`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      const file = icsFile.files[0];
+      if (!file) {
+        statusEl.innerHTML = '<span class="warn">Merci de sélectionner un fichier ICS.</span>';
+        return;
+      }
+      const months = Number(monthsInput.value || 6);
+      if (!months || months < 1) {
+        statusEl.innerHTML = '<span class="warn">Merci d’indiquer un nombre de mois valide.</span>';
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const result = parseEvents(text, months);
+        currentRows = result.rows;
+        renderSummaryTable(result.pastSummary, '#pastTable tbody');
+        renderSummaryTable(result.futureSummary, '#futureTable tbody');
+        updateStats(result);
+        downloadBtn.disabled = currentRows.length === 0;
+        statusEl.innerHTML = `<span class="ok">Analyse terminée.</span> ${currentRows.length} rendez-vous business détectés sur la période analysée.`;
+        debugEl.textContent = `Blocs VEVENT trouvés : ${result.veventCount} | Événements datés : ${result.totalEvents} | Événements à partir du ${formatDate(result.cutoff)} : ${result.filteredByDate}`;
+      } catch (err) {
+        console.error(err);
+        statusEl.innerHTML = '<span class="warn">Erreur lors de l’analyse du fichier.</span>';
+        debugEl.textContent = String(err);
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!currentRows.length) return;
+      downloadExcel(currentRows);
+    });
+
+    renderMappingTable();
+    renderExclusionTable();
+    updateMappingUiState();
+    updateExclusionUiState();
+    updateSettingsUiState();
+  </script>
+</body>
+</html>
