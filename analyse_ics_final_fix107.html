@@ -1,0 +1,3572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyse ICS vers Excel</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --accent2: #1d4ed8;
+      --ok: #047857;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Segoe UI, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.06);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 10px; font-size: 22px; }
+    p { margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .pill {
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#eef2ff;
+      font-size:12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+    @media (max-width: 900px) {
+      .grid, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type="file"], input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      font-family: inherit;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .primary { background: var(--accent); color: white; }
+    .primary:hover { background: var(--accent2); }
+    .secondary { background: #e5e7eb; color: #111827; }
+    .danger { background: #fee2e2; color: #991b1b; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafafa;
+    }
+    .stat .k {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .stat .v {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .substats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      position: sticky;
+      top: 0;
+    }
+    .table-wrap {
+      max-height: none;
+      overflow: visible;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .month-header-row {
+      background: #f8fafc;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .month-header-row td {
+      background: #f8fafc;
+    }
+    .month-detail-row.hidden {
+      display: none;
+    }
+    .month-toggle {
+      display: inline-block;
+      width: 16px;
+      margin-right: 6px;
+      transition: transform .2s ease;
+    }
+    .month-toggle.open {
+      transform: rotate(90deg);
+    }
+    .badge {
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:600;
+  color:#fff;
+}
+.badge-editeur { background:#2563eb; }
+.badge-client { background:#16a34a; }
+.badge-interne { background:#6b7280; }
+
+.filter-badges {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:8px 0 12px 0;
+}
+.filter-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:600;
+  border:1px solid transparent;
+  cursor:pointer;
+  user-select:none;
+  transition:transform .15s ease, opacity .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.filter-badge:hover {
+  transform:translateY(-1px);
+}
+.filter-badge.inactive {
+  opacity:.45;
+  border-color:#cbd5e1;
+  box-shadow:none;
+}
+.filter-badge .dot {
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.9);
+}
+.filter-badge-editeur { background:#2563eb; color:#fff; }
+.filter-badge-client { background:#16a34a; color:#fff; }
+.filter-badge-interne { background:#6b7280; color:#fff; }
+.filter-badge input { display:none; }
+
+.total-row {
+      font-weight: 700;
+      background: #fafafa;
+    }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: #92400e; font-weight: 600; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .param-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      cursor:pointer;
+      user-select:none;
+      gap:12px;
+    }
+    .param-title-wrap {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .chevron {
+      display:inline-block;
+      transition:transform .2s ease;
+      font-size:18px;
+      line-height:1;
+    }
+    .chevron.open {
+      transform:rotate(90deg);
+    }
+    .param-body {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height .25s ease, opacity .2s ease;
+      margin-top: 0;
+    }
+    .param-body.open {
+      max-height: 1200px;
+      opacity: 1;
+      margin-top:16px;
+    }
+
+    .clickable-count {
+      color: var(--accent2);
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .clickable-company {
+      color: var(--accent2);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .inline-action-btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .company-link {
+      color: var(--accent2);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .company-link.disabled {
+      color: var(--text);
+      text-decoration: none;
+      cursor: default;
+      pointer-events: none;
+      font-weight: 400;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1000;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-card {
+      width: min(760px, 100%);
+      max-height: 80vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 50px rgba(15,23,42,.2);
+      padding: 20px;
+    }
+    .modal-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #fff;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-close {
+      background:#e5e7eb;
+      color:#111827;
+    }
+    .table-toolbar {
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-bottom:10px;
+    }
+
+  
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); }
+.modal.open { display:block; }
+.modal-content { background:#fff; margin:10% auto; padding:20px; border-radius:8px; width:400px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; }
+
+
+    #stats {
+      width: 100%;
+    }
+    #stats .stat .v {
+      word-break: break-word;
+    }
+
+
+    /* Pleine largeur si futurs masqués */
+    #analysisBlocks.single {
+      grid-template-columns: 1fr;
+    }
+
+
+    .modal-card {
+      width: min(1400px, 95vw);
+    }
+    .modal-card table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .modal-card td,
+    .modal-card th {
+      word-break: break-word;
+      white-space: normal;
+      vertical-align: top;
+    }
+    .copy-btn {
+      border: none;
+      background: #e5e7eb;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 4px 6px;
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+    .copy-btn:hover {
+      background: #d1d5db;
+    }
+    .email-cell {
+      display: block;
+    }
+    .email-text {
+      min-width: 0;
+    }
+    .email-line {
+      margin-bottom: 2px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .email-organizer strong {
+      font-weight: 700;
+    }
+    .email-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+
+    .email-extra.hidden {
+      display: none;
+    }
+    .email-more-btn {
+      border: none;
+      background: #e5e7eb;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 12px;
+      flex: 0 0 auto;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .email-more-btn:hover {
+      background: #d1d5db;
+    }
+
+
+    .modal-card th:nth-child(7),
+    .modal-card td:nth-child(7) {
+      width: 280px;
+    }
+
+    .detail-filter-row input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+    }
+    .sortable-detail::after {
+      content: ' ↕';
+      font-size: 11px;
+      opacity: .6;
+    }
+
+
+    .sortable-grouped::after {
+      content: ' ↕';
+      font-size: 11px;
+      opacity: .6;
+    }
+
+    .success.inline-action-btn {
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+    }
+    .success.inline-action-btn:hover {
+      background-color: #218838;
+    }
+
+    .ics-status {
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      min-height: 20px;
+    }
+    .ics-status.loading {
+      color: #1d4ed8;
+    }
+    .ics-status.success {
+      color: #16a34a;
+      background: none;
+      padding: 4px 0;
+    }
+    .ics-status.error {
+      color: #b91c1c;
+    }
+    .ics-status .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      margin-right: 8px;
+      vertical-align: -2px;
+      animation: ics-spin 0.8s linear infinite;
+    }
+    @keyframes ics-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .top-form-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      margin-top: 12px;
+    }
+    .top-form-field {
+      min-width: 0;
+    }
+    .top-actions {
+      margin-top: 16px;
+    }
+    .success {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+    }
+    .success:hover {
+      background: #15803d;
+    }
+    .export-btn-hidden {
+      display: none;
+    }
+    @media (max-width: 900px) {
+      .top-form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .detail-filter-row th {
+      vertical-align: middle;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    .detail-filter-row th:empty {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .detail-filter-row input,
+    .detail-filter-row button {
+      margin: 0;
+    }
+    .detail-filter-row .reset-grouped-filters-btn,
+    .detail-filter-row .reset-detail-filters-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .detail-filter-row .grouped-filter-input,
+    .detail-filter-row .detail-filter-input {
+      width: 100%;
+      min-width: 0;
+    }
+
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Analyse ICS → Excel</h1>
+      <p class="muted">Chargez un fichier <code>.ics</code>, indiquez le nombre de mois à analyser, puis générez un fichier Excel <code>.xlsx</code> contenant les rendez-vous business.</p>
+      <p class="muted small">Règle de période : <strong>X mois pleins + mois en cours</strong>. Exemple : 3 = événements à partir du 1er jour du mois situé 3 mois avant le mois courant.</p>
+
+      <div class="top-form-row">
+        <div class="top-form-field months-field">
+          <label for="months">Nombre de mois à analyser</label>
+          <input id="months" type="number" min="1" max="36" value="2" />
+        </div>
+        <div class="top-form-field file-field">
+          <label for="icsFile">Importer un fichier ICS</label>
+          <input id="icsFile" type="file" accept=".ics,text/calendar" />
+          <div id="icsUploadStatus" class="ics-status" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="actions top-actions">
+        <button class="primary" id="analyzeBtn">Analyser</button>
+        <button class="success export-btn-hidden" id="downloadBtn" disabled>Télécharger le fichier Excel</button>
+      </div>
+
+      <p id="status" class="muted" style="margin-top:12px;">En attente d’un fichier.</p>
+      <p id="debug" class="muted small"></p>
+      <div class="stats" id="stats" style="display:none;">
+        <div class="stat"><div class="k">Événements business</div><div class="v" id="statEvents">0</div></div>
+        <div class="stat"><div class="k">Entreprises</div><div class="v" id="statCompanies">0</div></div>
+        <div class="stat"><div class="k">Temps total</div><div class="v" id="statHours">0 h</div></div>
+        <div class="stat"><div class="k">Période analysée</div><div class="v" id="statPeriod">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="param-header" id="toggleSettingsBtn">
+        <div class="param-title-wrap">
+          <span class="chevron" id="settingsChevron">▶</span>
+          <h2 style="margin:0;">Paramétrage</h2>
+        </div>
+        <span class="muted small">Cliquer pour afficher / masquer</span>
+      </div>
+      <div class="param-body" id="settingsBody">
+
+        <div class="card">
+          <div class="param-header" id="clientsHeader">
+            <div class="param-title-wrap">
+              <span class="chevron open" id="clientsChevron">▶</span>
+              <h2 style="margin:0;">Table des clients</h2>
+            </div>
+          </div>
+          <p class="muted">Toute entreprise absente de cette table est considérée par défaut comme <strong>Editeur</strong>. <span class="pill">Client</span></p>
+          <div class="actions" style="margin-top:0; margin-bottom:12px;">
+            <button class="secondary" id="toggleMapBtn" style="display:none;">Afficher la table des clients</button>
+            <button class="secondary" id="resetMapBtn">Réinitialiser la table par défaut</button>
+          </div>
+          <div id="mappingPanel" class="param-body open">
+            <div class="grid-3">
+              <div>
+                <label for="mapEntreprise">Entreprise</label>
+                <input id="mapEntreprise" type="text" placeholder="Ex : COGEP" />
+              </div>
+              <div>
+                <label for="mapType">Type d’entreprise</label>
+                <select id="mapType">
+                  <option value="Client">Client</option>
+                </select>
+              </div>
+              <div class="actions" style="margin-top:0;">
+                <button class="primary" id="addMapBtn">Ajouter / Mettre à jour</button>
+                <button class="secondary" id="exportMapBtn" style="display:none;">Exporter la table</button>
+                <button class="secondary" id="importMapBtn">Importer la table</button>
+              </div>
+            </div>
+            <input id="mapImportFile" type="file" accept=".json" style="display:none;" />
+            <div class="table-wrap" style="margin-top:16px;">
+              <table id="mappingTable">
+                <thead>
+                  <tr><th>Entreprise</th><th>Type d’entreprise</th><th>Action</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="param-header" id="exclusionsHeader">
+            <div class="param-title-wrap">
+              <span class="chevron open" id="exclusionsChevron">▶</span>
+              <h2 style="margin:0;">Table des exclusions</h2>
+            </div>
+          </div>
+          <p class="muted">Les exclusions sont testées sur le <strong>titre + la description</strong>, avec recherche par <strong>mot entier</strong> pour éviter les faux positifs.</p>
+          <div class="actions" style="margin-top:0; margin-bottom:12px;">
+            <button class="secondary" id="toggleExBtn" style="display:none;">Afficher la table des exclusions</button>
+            <button class="secondary" id="resetExBtn">Réinitialiser la table par défaut</button>
+          </div>
+          <div id="exclusionPanel" class="param-body open">
+            <div class="grid-3">
+              <div>
+                <label for="exclusionValue">Exclusion</label>
+                <input id="exclusionValue" type="text" placeholder="Ex : congés, vacances, déplacement" />
+              </div>
+              <div>
+                <label for="exclusionMode">Mode</label>
+                <select id="exclusionMode">
+                  <option value="word">Mot entier</option>
+                  <option value="phrase">Expression</option>
+                </select>
+              </div>
+              <div class="actions" style="margin-top:0;">
+                <button class="primary" id="addExBtn">Ajouter / Mettre à jour</button>
+                <button class="secondary" id="exportExBtn" style="display:none;">Exporter la table</button>
+                <button class="secondary" id="importExBtn">Importer la table</button>
+              </div>
+            </div>
+            <input id="exImportFile" type="file" accept=".json" style="display:none;" />
+            <div class="table-wrap" style="margin-top:16px;">
+              <table id="exclusionTable">
+                <thead>
+                  <tr><th>Valeur</th><th>Mode</th><th>Action</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+<div class="card" id="globalFiltersCard" style="display:none;">
+        <h2>Filtres</h2>
+        <p class="muted">Ces filtres s’appliquent simultanément aux deux tableaux.</p>
+        <div class="filter-badges" id="globalTypeFilters">
+          <label class="filter-badge filter-badge-editeur" data-type="Editeur">
+            <input type="checkbox" class="type-filter" value="Editeur" checked>
+            <span class="dot"></span>
+            <span>Editeur</span>
+          </label>
+          <label class="filter-badge filter-badge-client" data-type="Client">
+            <input type="checkbox" class="type-filter" value="Client" checked>
+            <span class="dot"></span>
+            <span>Client</span>
+          </label>
+          <label class="filter-badge filter-badge-interne" data-type="Interne">
+            <input type="checkbox" class="type-filter" value="Interne" checked>
+            <span class="dot"></span>
+            <span>Interne</span>
+          </label>
+          <label class="filter-badge" data-type="Futurs" style="background:#7c3aed; color:#fff;">
+            <input type="checkbox" class="type-filter" value="Futurs">
+            <span class="dot"></span>
+            <span>Futurs</span>
+          </label>
+          <label class="filter-badge" data-type="Exclus" style="background:#991b1b; color:#fff;">
+            <input type="checkbox" class="type-filter" value="Exclus">
+            <span class="dot"></span>
+            <span>Exclus</span>
+          </label>
+          <div id="icsUploadStatus" class="ics-status" aria-live="polite"></div>
+        </div>
+      </div>
+
+    <div class="grid-2" id="analysisBlocks" style="display:none;">
+      <div class="card">
+        <h2>Période passée</h2>
+        <p class="muted" id="pastLabel">Jusqu’à la date du jour</p>
+        <div class="substats">
+          <div class="stat"><div class="k">Rendez-vous</div><div class="v" id="pastEvents">0</div></div>
+          <div class="stat"><div class="k">Temps total</div><div class="v" id="pastHours">0 h</div></div>
+        </div>
+        <h3 style="margin:8px 0 6px 0; font-size:16px;">Répartition par TypeEntreprise et par mois</h3>
+        <div class="table-toolbar">
+          <button class="secondary toggle-all-btn" data-target="#pastTable tbody">Tout déplier</button>
+        </div>
+        <div class="table-wrap">
+          <table id="pastTable">
+            <thead>
+              <tr><th>Mois</th><th>TypeEntreprise</th><th>Rendez-vous</th><th>Temps total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="futureSection">
+        <h2>Période à venir</h2>
+        <p class="muted" id="futureLabel">Après la date du jour</p>
+        <div class="substats">
+          <div class="stat"><div class="k">Rendez-vous</div><div class="v" id="futureEvents">0</div></div>
+          <div class="stat"><div class="k">Temps total</div><div class="v" id="futureHours">0 h</div></div>
+        </div>
+        <h3 style="margin:8px 0 6px 0; font-size:16px;">Répartition par TypeEntreprise et par mois</h3>
+        <div class="table-toolbar">
+          <button class="secondary toggle-all-btn" data-target="#futureTable tbody">Tout déplier</button>
+        </div>
+        <div class="table-wrap">
+          <table id="futureTable">
+            <thead>
+              <tr><th>Mois</th><th>TypeEntreprise</th><th>Rendez-vous</th><th>Temps total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="excludedBlock" style="display:none;">
+    <h2>Rendez-vous exclus de l’analyse</h2>
+    <p class="muted" id="excludedLabel">Éléments exclus selon les règles d’exclusion</p>
+    <div class="substats">
+      <div class="stat"><div class="k">Rendez-vous exclus</div><div class="v" id="excludedEvents">0</div></div>
+      <div class="stat"><div class="k">Temps total</div><div class="v" id="excludedHours">0 h</div></div>
+    </div>
+    <div class="table-wrap">
+      <table id="excludedTable">
+        <thead>
+          <tr><th>Date</th><th>Heure</th><th>Durée</th><th>Entreprise</th><th>Catégorie</th><th>Sujet</th><th>Motif</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="rdvDetailModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <h2 id="rdvDetailTitle" style="margin:0;">Détail des entreprises</h2>
+          <p id="rdvDetailSubtitle" class="muted" style="margin:6px 0 0 0;"></p>
+        </div>
+        <div class="actions" style="margin-top:0; align-items:center;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0; font-weight:600;">
+            <input type="checkbox" id="rdvDetailToggle" />
+            <span>Détail</span>
+          </label>
+          <button class="secondary" id="rdvDetailExportBtn">Exporter en Excel</button>
+          <button class="modal-close" id="rdvDetailCloseBtn">Fermer</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:none;">
+        <table>
+          <thead id="rdvDetailHead"></thead>
+          <tbody id="rdvDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    const icsFile = document.getElementById('icsFile');
+const monthsInput = document.getElementById('months');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusEl = document.getElementById('status');
+    const debugEl = document.getElementById('debug');
+    const stats = document.getElementById('stats');
+    const analysisBlocks = document.getElementById('analysisBlocks');
+    const excludedBlock = document.getElementById('excludedBlock');
+
+    const mapEntrepriseInput = document.getElementById('mapEntreprise');
+    const addMapBtn = document.getElementById('addMapBtn');
+    const exportMapBtn = document.getElementById('exportMapBtn');
+    const importMapBtn = document.getElementById('importMapBtn');
+    const mapImportFile = document.getElementById('mapImportFile');
+    const toggleMapBtn = document.getElementById('toggleMapBtn');
+    const resetMapBtn = document.getElementById('resetMapBtn');
+    const mappingPanel = document.getElementById('mappingPanel');
+
+    const exclusionValueInput = document.getElementById('exclusionValue');
+    const exclusionModeSelect = document.getElementById('exclusionMode');
+    const addExBtn = document.getElementById('addExBtn');
+    const exportExBtn = document.getElementById('exportExBtn');
+    const importExBtn = document.getElementById('importExBtn');
+    const exImportFile = document.getElementById('exImportFile');
+    const toggleExBtn = document.getElementById('toggleExBtn');
+    const resetExBtn = document.getElementById('resetExBtn');
+    const exclusionPanel = document.getElementById('exclusionPanel');
+    const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+    const settingsBody = document.getElementById('settingsBody');
+    const settingsChevron = document.getElementById('settingsChevron');
+    const clientsHeader = document.getElementById('clientsHeader');
+    const clientsChevron = document.getElementById('clientsChevron');
+    const mappingPanelEl = document.getElementById('mappingPanel');
+
+    const exclusionsHeader = document.getElementById('exclusionsHeader');
+    const exclusionsChevron = document.getElementById('exclusionsChevron');
+    const exclusionPanelEl = document.getElementById('exclusionPanel');
+
+    function loadBool(key, defVal){
+      try {
+        const v = localStorage.getItem(key);
+        return v===null ? defVal : v==='true';
+      } catch { return defVal; }
+    }
+    function saveBool(key,val){ localStorage.setItem(key,String(val)); }
+
+    let clientsOpen = loadBool('icsClientsOpen', true);
+    let exclusionsOpen = loadBool('icsExclusionsOpen', true);
+
+    function updateClientsUi(){
+      mappingPanelEl.classList.toggle('open', clientsOpen);
+      clientsChevron.classList.toggle('open', clientsOpen);
+    }
+    function updateExclusionsUi(){
+      exclusionPanelEl.classList.toggle('open', exclusionsOpen);
+      exclusionsChevron.classList.toggle('open', exclusionsOpen);
+    }
+
+
+    let currentRows = [];
+    let pivotMonthStates = {};
+    const rdvDetailModal = document.getElementById('rdvDetailModal');
+    const rdvDetailTitle = document.getElementById('rdvDetailTitle');
+    const rdvDetailSubtitle = document.getElementById('rdvDetailSubtitle');
+    const rdvDetailHead = document.getElementById('rdvDetailHead');
+    const rdvDetailBody = document.getElementById('rdvDetailBody');
+    const rdvDetailCloseBtn = document.getElementById('rdvDetailCloseBtn');
+    const rdvDetailExportBtn = document.getElementById('rdvDetailExportBtn');
+    const rdvDetailToggle = document.getElementById('rdvDetailToggle');
+    let currentDetailExportRows = [];
+    let currentDetailExportName = 'detail_entreprises';
+    let currentDetailGroupedRows = [];
+    let currentDetailFlatRows = [];
+    let currentSelectedEntreprise = null;
+    let currentBaseDetailTitle = '';
+    let currentBaseDetailSubtitle = '';
+    let currentDetailContext = null;
+    let detailSortState = { key: 'date', dir: 'asc' };
+    let detailFilterState = { date: '', heure: '', duree: '', categorie: '', email: '', type: '', sujet: '' };
+    let groupedSortState = { key: 'count', dir: 'desc' };
+    let groupedFilterState = { entreprise: '', typeEntreprise: '', rendezvous: '', temps: '' };
+
+    function loadSettingsVisible() {
+      try {
+        const saved = localStorage.getItem('icsSettingsVisible');
+        return saved === 'true';
+      } catch {
+        return false;
+      }
+    }
+
+    function saveSettingsVisible(value) {
+      localStorage.setItem('icsSettingsVisible', String(value));
+    }
+
+    let settingsVisible = loadSettingsVisible();
+
+    function updateSettingsUiState() {
+      settingsBody.classList.toggle('open', settingsVisible);
+      settingsChevron.classList.toggle('open', settingsVisible);
+    }
+
+    const defaultMapping = {
+      'COGEP': 'Client'
+    };
+
+    const defaultExclusions = [
+      { value: 'fête du travail', mode: 'phrase' },
+      { value: 'ascension', mode: 'word' },
+      { value: 'congé', mode: 'word' },
+      { value: 'congés', mode: 'word' },
+      { value: 'cp', mode: 'word' },
+      { value: 'vacances', mode: 'word' },
+      { value: 'déplacement', mode: 'word' },
+      { value: 'férié', mode: 'word' },
+      { value: 'anniversaire', mode: 'word' },
+      { value: 'ABS', mode: 'word' }
+    ];
+
+    let entrepriseMapping = loadMapping();
+    let exclusions = loadExclusions();
+    let mappingPanelVisible = loadPanelVisible('icsMappingPanelVisible', false);
+    let exclusionPanelVisible = loadPanelVisible('icsExclusionPanelVisible', false);
+
+    function normalizeKey(v) {
+      return String(v || '').trim().toUpperCase();
+    }
+
+    function normalizeExclusionKey(item) {
+      return `${String(item.value || '').trim().toLowerCase()}|${item.mode || 'word'}`;
+    }
+
+    function loadPanelVisible(key, defaultValue) {
+      try {
+        const saved = localStorage.getItem(key);
+        return saved === null ? defaultValue : saved === 'true';
+      } catch {
+        return defaultValue;
+      }
+    }
+
+    function savePanelVisible(key, value) {
+      localStorage.setItem(key, String(value));
+    }
+
+    function loadMapping() {
+      try {
+        const saved = localStorage.getItem('icsEntrepriseMapping');
+        if (!saved) return { ...defaultMapping };
+        return { ...defaultMapping, ...JSON.parse(saved) };
+      } catch {
+        return { ...defaultMapping };
+      }
+    }
+
+    function saveMapping() {
+      localStorage.setItem('icsEntrepriseMapping', JSON.stringify(entrepriseMapping));
+      updateMappingUiState();
+    }
+    function syncClientMappingFromCategory(rows) {
+      let changed = false;
+      (rows || []).forEach(row => {
+        const categorie = String(row.categorie || '');
+        const entreprise = normalizeKey(row.entreprise || '');
+        const typeFromCategorie = getTypeEntrepriseFromCategorie(categorie);
+
+        if (typeFromCategorie === 'Client' && entreprise && entreprise !== 'INTERNE') {
+          if (entrepriseMapping[entreprise] !== 'Client') {
+            entrepriseMapping[entreprise] = 'Client';
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) {
+        saveMapping();
+        renderMappingTable();
+      }
+    }
+
+    function mappingsEqual(a, b) {
+      const ak = Object.keys(a).sort();
+      const bk = Object.keys(b).sort();
+      if (ak.length !== bk.length) return false;
+      for (let i = 0; i < ak.length; i++) {
+        if (ak[i] !== bk[i]) return false;
+        if (a[ak[i]] !== b[bk[i]]) return false;
+      }
+      return true;
+    }
+
+    function loadExclusions() {
+      try {
+        const saved = localStorage.getItem('icsExclusions');
+        if (!saved) return [...defaultExclusions];
+        const arr = JSON.parse(saved);
+        return Array.isArray(arr) ? arr : [...defaultExclusions];
+      } catch {
+        return [...defaultExclusions];
+      }
+    }
+
+    function saveExclusions() {
+      localStorage.setItem('icsExclusions', JSON.stringify(exclusions));
+      updateExclusionUiState();
+    updateSettingsUiState();
+    updateClientsUi();
+    updateExclusionsUi(); updateClientsUi(); updateExclusionsUi();
+    }
+
+    function exclusionsEqual(a, b) {
+      const aa = [...a].map(normalizeExclusionKey).sort();
+      const bb = [...b].map(normalizeExclusionKey).sort();
+      if (aa.length !== bb.length) return false;
+      for (let i = 0; i < aa.length; i++) {
+        if (aa[i] !== bb[i]) return false;
+      }
+      return true;
+    }
+
+    function escapeRegex(text) {
+      return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function updateMappingUiState() {
+      const isModified = !mappingsEqual(entrepriseMapping, defaultMapping);
+      exportMapBtn.style.display = isModified ? '' : 'none';
+    }
+
+    function updateExclusionUiState() {
+      const isModified = !exclusionsEqual(exclusions, defaultExclusions);
+      exportExBtn.style.display = isModified ? '' : 'none';
+    }
+
+    function renderMappingTable() {
+      const tbody = document.querySelector('#mappingTable tbody');
+      tbody.innerHTML = '';
+      Object.keys(entrepriseMapping).sort().forEach(key => {
+        if (entrepriseMapping[key] !== 'Client') return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${key}</td>
+          <td>${entrepriseMapping[key]}</td>
+          <td><button class="danger" data-key="${key}">Supprimer</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('button[data-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          delete entrepriseMapping[btn.dataset.key];
+          saveMapping();
+          renderMappingTable();
+        });
+      });
+
+      updateMappingUiState();
+    }
+
+    function renderExclusionTable() {
+      const tbody = document.querySelector('#exclusionTable tbody');
+      tbody.innerHTML = '';
+      [...exclusions]
+        .sort((a, b) => normalizeExclusionKey(a).localeCompare(normalizeExclusionKey(b)))
+        .forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.value}</td>
+            <td>${item.mode === 'phrase' ? 'Expression' : 'Mot entier'}</td>
+            <td><button class="danger" data-key="${normalizeExclusionKey(item)}">Supprimer</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      tbody.querySelectorAll('button[data-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          exclusions = exclusions.filter(item => normalizeExclusionKey(item) !== btn.dataset.key);
+          saveExclusions();
+          renderExclusionTable();
+        });
+      });
+
+      updateExclusionUiState();
+      updateSettingsUiState();
+    }
+
+    addMapBtn.addEventListener('click', () => {
+      const key = normalizeKey(mapEntrepriseInput.value);
+      if (!key) return;
+      entrepriseMapping[key] = 'Client';
+      saveMapping();
+      renderMappingTable();
+      mapEntrepriseInput.value = '';
+    });
+
+    exportMapBtn.addEventListener('click', () => {
+      const clientsOnly = {};
+      Object.keys(entrepriseMapping).forEach(k => {
+        if (entrepriseMapping[k] === 'Client') clientsOnly[k] = 'Client';
+      });
+      const blob = new Blob([JSON.stringify(clientsOnly, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'table_clients.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    importMapBtn.addEventListener('click', () => mapImportFile.click());
+    mapImportFile.addEventListener('change', async () => {
+      const file = mapImportFile.files[0];
+      if (!file) return;
+      try {
+        const text = await getIcsText();
+        const data = JSON.parse(text);
+        const next = { ...defaultMapping };
+        Object.keys(data).forEach(k => {
+          next[normalizeKey(k)] = 'Client';
+        });
+        entrepriseMapping = next;
+        saveMapping();
+        renderMappingTable();
+      } catch {
+        alert('Fichier JSON invalide.');
+      }
+      mapImportFile.value = '';
+    });
+
+    clientsHeader.addEventListener('click', () => {
+      clientsOpen = !clientsOpen;
+      saveBool('icsClientsOpen', clientsOpen);
+      updateClientsUi();
+    });
+
+    exclusionsHeader.addEventListener('click', () => {
+      exclusionsOpen = !exclusionsOpen;
+      saveBool('icsExclusionsOpen', exclusionsOpen);
+      updateExclusionsUi();
+    });
+
+    toggleSettingsBtn.addEventListener('click', () => {
+      settingsVisible = !settingsVisible;
+      saveSettingsVisible(settingsVisible);
+      updateSettingsUiState();
+    });
+
+    // Bouton masqué conservé pour compatibilité, sans effet sur l'affichage.
+    toggleMapBtn.addEventListener('click', () => {
+      mappingPanelVisible = !mappingPanelVisible;
+      savePanelVisible('icsMappingPanelVisible', mappingPanelVisible);
+      updateMappingUiState();
+    });
+
+    resetMapBtn.addEventListener('click', () => {
+      entrepriseMapping = { ...defaultMapping };
+      saveMapping();
+      renderMappingTable();
+    });
+
+    addExBtn.addEventListener('click', () => {
+      const value = String(exclusionValueInput.value || '').trim();
+      const mode = exclusionModeSelect.value;
+      if (!value) return;
+
+      const key = normalizeExclusionKey({ value, mode });
+      exclusions = exclusions.filter(item => normalizeExclusionKey(item) !== key);
+      exclusions.push({ value, mode });
+      saveExclusions();
+      renderExclusionTable();
+      exclusionValueInput.value = '';
+      exclusionModeSelect.value = 'word';
+    });
+
+    exportExBtn.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(exclusions, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'table_exclusions.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    importExBtn.addEventListener('click', () => exImportFile.click());
+    exImportFile.addEventListener('change', async () => {
+      const file = exImportFile.files[0];
+      if (!file) return;
+      try {
+        const text = await getIcsText();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error();
+        exclusions = data
+          .map(item => ({
+            value: String(item.value || '').trim(),
+            mode: item.mode === 'phrase' ? 'phrase' : 'word'
+          }))
+          .filter(item => item.value);
+        saveExclusions();
+        renderExclusionTable();
+      } catch {
+        alert('Fichier JSON invalide.');
+      }
+      exImportFile.value = '';
+    });
+
+    toggleExBtn.addEventListener('click', () => {
+      exclusionPanelVisible = !exclusionPanelVisible;
+      savePanelVisible('icsExclusionPanelVisible', exclusionPanelVisible);
+      updateExclusionUiState();
+    updateSettingsUiState();
+    });
+
+    resetExBtn.addEventListener('click', () => {
+      exclusions = [...defaultExclusions];
+      saveExclusions();
+      renderExclusionTable();
+    });
+
+    function unfoldICS(text) {
+      return String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n[ \t]/g, '');
+    }
+
+    function escXml(v) {
+      return String(v ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&apos;');
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function formatDate(d) { return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+    function formatTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+    function hoursFromMs(ms) { return `${(ms / 3600000).toFixed(1)} h`; }
+
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '';
+      const totalMin = Math.round(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h && m) return `${h}h${pad(m)}`;
+      if (h) return `${h}h`;
+      return `${m} min`;
+    }
+
+    function monthLabel(d) {
+      const str = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(d);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function parseICalDate(raw) {
+      if (!raw) return null;
+      const val = raw.trim();
+      if (/^\d{8}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        return new Date(y, mo, d, 0, 0, 0, 0);
+      }
+      if (/^\d{8}T\d{6}Z$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13), s = +val.slice(13,15);
+        return new Date(Date.UTC(y, mo, d, h, mi, s));
+      }
+      if (/^\d{8}T\d{6}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13), s = +val.slice(13,15);
+        return new Date(y, mo, d, h, mi, s, 0);
+      }
+      if (/^\d{8}T\d{4}$/.test(val)) {
+        const y = +val.slice(0,4), mo = +val.slice(4,6)-1, d = +val.slice(6,8);
+        const h = +val.slice(9,11), mi = +val.slice(11,13);
+        return new Date(y, mo, d, h, mi, 0, 0);
+      }
+      return null;
+    }
+
+    function parseEventBlock(block) {
+      const event = {};
+      const lines = String(block || '').split('\n');
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+        if (!line) continue;
+
+        const idx = line.indexOf(':');
+        if (idx === -1) continue;
+
+        const left = line.slice(0, idx).trim();
+        const value = line.slice(idx + 1);
+        const fieldName = left.split(';')[0].toUpperCase();
+
+        if (!(fieldName in event)) {
+          event[fieldName] = value;
+        } else if (Array.isArray(event[fieldName])) {
+          event[fieldName].push(value);
+        } else {
+          event[fieldName] = [event[fieldName], value];
+        }
+      }
+
+      return event;
+    }
+
+    function safeValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    }
+
+    function cleanText(v) {
+      return String(v || '')
+        .replace(/\\n/g, '\n')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\:/g, ':')
+        .trim();
+    }
+
+    function normalizeCategoriesValue(value) {
+      if (Array.isArray(value)) {
+        return value.map(v => cleanText(v)).filter(Boolean).join('; ');
+      }
+      return cleanText(value || '');
+    }
+
+    function getEventCategories(evt, rawBlock) {
+      const standard = normalizeCategoriesValue(evt.CATEGORIES);
+      if (standard) return standard;
+
+      const microsoftFields = [
+        'X-MICROSOFT-CDO-CATEGORY',
+        'X-MICROSOFT-CATEGORY',
+        'X-OUTLOOK-CATEGORY'
+      ];
+
+      for (const field of microsoftFields) {
+        const v = normalizeCategoriesValue(evt[field]);
+        if (v) return v;
+      }
+
+      const raw = String(rawBlock || '');
+      const rawPatterns = [
+        /(?:^|\n)CATEGORIES(?:;[^:]*)?:(.+?)(?=\n[A-Z]|$)/i,
+        /(?:^|\n)X-MICROSOFT-CDO-CATEGORY(?:;[^:]*)?:(.+?)(?=\n[A-Z]|$)/i,
+        /(?:^|\n)X-MICROSOFT-CATEGORY(?:;[^:]*)?:(.+?)(?=\n[A-Z]|$)/i,
+        /(?:^|\n)X-OUTLOOK-CATEGORY(?:;[^:]*)?:(.+?)(?=\n[A-Z]|$)/i
+      ];
+
+      for (const pattern of rawPatterns) {
+        const match = raw.match(pattern);
+        if (match && match[1]) {
+          const value = normalizeCategoriesValue(match[1]);
+          if (value) return value;
+        }
+      }
+
+      return '';
+    }
+
+    function isInternalCategoryLabel(categoryLabel) {
+      return /(^|[\s,;|\-_/()])interne(s)?($|[\s,;|\-_/()])/i.test(String(categoryLabel || ''));
+    }
+
+    const INTERNAL_DOMAINS_REGEX = /@(acd-groupe\.fr|village-connecte\.fr)$/i;
+
+    function prettifyDomain(domain) {
+      const base = domain.replace(/^www\./i, '').split('.');
+      const core = base.length > 1 ? base[base.length - 2] : base[0];
+      if (!core) return '';
+      const aliases = {
+        qonto:'Qonto',
+        smartisi:'Smartisi',
+        agicap:'Agicap',
+        chift:'Chift',
+        yooz:'Yooz',
+        sellsy:'Sellsy',
+        cecurity:'Cecurity',
+        vikta:'Vikta',
+        comptasecure:'ComptaSecure',
+        dext:'DEXT',
+        cogep:'COGEP',
+        fidextra:'FIDEXTRA',
+        leanpay:'LeanPay',
+        enso:'Enso',
+        datatalks:'Data Talks'
+      };
+      return aliases[core.toLowerCase()] || core.charAt(0).toUpperCase() + core.slice(1).toLowerCase();
+    }
+
+    function normalizeWebsite(url) {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      if (/^https?:\/\//i.test(raw)) return raw;
+      return 'https://' + raw.replace(/^www\./i, 'www.');
+    }
+
+    function isGenericWebsiteDomain(domain) {
+      return /outlook\.com|gmail\.com|hotmail\.com|acd-groupe\.fr|village-connecte\.fr|teams\.microsoft\.com|microsoft\.com|google\.com|calendly\.com/i.test(String(domain || ''));
+    }
+
+    function extractAttendeeEmails(attendeeField) {
+      const values = Array.isArray(attendeeField) ? attendeeField : [attendeeField];
+      const emails = [];
+
+      values.forEach(value => {
+        const str = String(value || '');
+        const match = str.match(/mailto:([^\s;>]+)/i);
+        if (match && match[1]) {
+          emails.push(match[1].trim().toLowerCase());
+        }
+      });
+
+      return [...new Set(emails)];
+    }
+
+    function extractMailtoEmail(fieldValue) {
+      const str = String(fieldValue || '');
+      const match = str.match(/mailto:([^\s;>]+)/i);
+      return match && match[1] ? match[1].trim().toLowerCase() : '';
+    }
+
+    function getFirstExternalEmail(attendeeEmails = [], organizerEmail = '') {
+      const emails = [...(Array.isArray(attendeeEmails) ? attendeeEmails : []), organizerEmail].filter(Boolean);
+      return emails.find(email => !INTERNAL_DOMAINS_REGEX.test(String(email || '').trim())) || '';
+    }
+
+    function inferCompanyFromExternalEmail(attendeeEmails = [], organizerEmail = '') {
+      const externalEmail = getFirstExternalEmail(attendeeEmails, organizerEmail);
+      if (!externalEmail) return '';
+      const domain = externalEmail.split('@')[1] || '';
+      return domain ? prettifyDomain(domain) : '';
+    }
+
+    function inferWebsite(description, summary, company, attendeeEmails = []) {
+      const desc = cleanText(description);
+
+      for (const email of attendeeEmails) {
+        const domain = (email.split('@')[1] || '').toLowerCase().replace(/^www\./, '');
+        if (domain && !isGenericWebsiteDomain(domain)) {
+          return normalizeWebsite('https://' + domain);
+        }
+      }
+
+      const emailMatches = [...desc.matchAll(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/gi)];
+      if (emailMatches.length) {
+        for (const match of emailMatches) {
+          const domain = (match[1] || '').toLowerCase().replace(/^www\./, '');
+          if (domain && !isGenericWebsiteDomain(domain)) {
+            return normalizeWebsite('https://' + domain);
+          }
+        }
+      }
+
+      const explicitUrlMatch = desc.match(/https?:\/\/[^\s<>"]+/i);
+      if (explicitUrlMatch) {
+        const explicitUrl = normalizeWebsite(explicitUrlMatch[0]);
+        try {
+          const host = new URL(explicitUrl).hostname.replace(/^www\./i, '');
+          if (!isGenericWebsiteDomain(host)) {
+            return explicitUrl;
+          }
+        } catch {}
+      }
+
+      const knownWebsites = {
+        'Qonto': 'https://qonto.com',
+        'Chift': 'https://www.getchift.com',
+        'LeanPay': 'https://www.leanpay.io',
+        'YOOZ': 'https://www.getyooz.com',
+        'Yooz': 'https://www.getyooz.com',
+        'Agicap': 'https://agicap.com',
+        'DEXT': 'https://dext.com',
+        'Smartisi': 'https://smartisi.com',
+        'Sellsy': 'https://sellsy.com',
+        'Vikta': 'https://vikta.fr',
+        'ComptaSecure': 'https://comptasecure.fr',
+        'Formalis': 'https://www.formalis.fr',
+        'Visma': 'https://www.visma.com',
+        'Cegid': 'https://www.cegid.com',
+        'CEGEDIM': 'https://www.cegedim.com'
+      };
+
+      return knownWebsites[company] || '';
+    }
+
+    function inferCompany(description, summary, attendeeEmails = [], organizerEmail = '') {
+      const desc = cleanText(description);
+      const s = cleanText(summary);
+
+      // Priorité 1 : société explicite dans la description (ex: "votre entreprise")
+      let m = desc.match(/votre entreprise\s*:\s*([^\n]+)/i);
+      if (m) return m[1].trim();
+
+      m = desc.match(/nom de l'entreprise\s*:\s*([^\n]+)/i);
+      if (m) return m[1].trim();
+
+      // Priorité 2 : société détectée dans le titre (SUMMARY)
+      const knownCompanies = [
+        ['COGEP', /\bcogep\b/i],
+        ['Agicap', /\bagicap\b/i],
+        ['Regate', /\bregate\b/i],
+        ['Qonto', /\bqonto\b/i],
+        ['ComptaSecure', /\bcomptasecure\b/i],
+        ['Chift', /\bchift\b/i],
+        ['Vikta', /\bvikta\b/i],
+        ['LeanPay', /\bleans?pay\b/i],
+        ['Enso RSE', /\benso\s*rse\b/i],
+        ['Smartisi', /\bsmartisi\b/i],
+        ['YOOZ', /\byooz\b/i],
+        ['DEXT', /\bdext\b/i],
+        ['COGEP', /\bcogep\b/i],
+        ['Pennylane', /\bpennylane\b/i],
+        ['Sellsy', /\bsellsy\b/i],
+        ['Visma', /\bvisma\b/i],
+        ['Cegid', /\bcegid\b/i],
+        ['Formalis', /\bformalis\b/i],
+        ['CEGEDIM', /\bcegedim\b/i],
+        ['ELNY', /\belny\b/i]
+      ];
+
+      for (const [name, pattern] of knownCompanies) {
+        if (pattern.test(s)) return name;
+      }
+
+      // Cas fréquents de titres structurés
+      m = s.match(/^([^\-\/|]+?)\s*[\/-]/);
+      if (m) {
+        const candidate = m[1].trim();
+        if (candidate && !/^(client|editeur|éditeur|interne|suivi|point|rdv|rendez-vous)$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+
+      m = s.match(/[\/-]\s*([^\-\/|]+?)$/);
+      if (m) {
+        const candidate = m[1].trim();
+        if (candidate && !/^(client|editeur|éditeur|interne|suivi|point|rdv|rendez-vous|acd)$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+
+
+      // Priorité 3 : domaine de l'email externe (participants / organisateur)
+      const externalEmail = getFirstExternalEmail(attendeeEmails, organizerEmail);
+      if (externalEmail) {
+        const domain = externalEmail.split('@')[1] || '';
+        if (domain) return prettifyDomain(domain);
+      }
+
+      // Priorité 4 : fallback sur les emails trouvés dans la description
+      m = desc.match(/email de l'invité\s*:\s*([^\s\n]+)/i);
+      if (m) {
+        const email = m[1].trim().toLowerCase();
+        const domain = email.split('@')[1] || '';
+        if (domain) return prettifyDomain(domain);
+      }
+
+      const emailMatches = [...desc.matchAll(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/gi)];
+      if (emailMatches.length) return prettifyDomain(emailMatches[0][1].toLowerCase());
+
+      if (/agicap\s*&\s*acd/i.test(s)) return 'Agicap';
+      if (/acd\s*-\s*regate/i.test(s)) return 'Regate';
+
+      return '';
+    }
+
+    function getEntrepriseType(entreprise) {
+      const key = normalizeKey(entreprise || 'Interne');
+
+      // Règle métier spécifique : ACD Groupe = Interne
+      if (/^ACD[-\s]?GROUPE$/i.test(key) || key === 'ACD' || key === 'ACDGROUPE') {
+        return 'Interne';
+      }
+
+      if (key === 'INTERNE') return 'Interne';
+      if (entrepriseMapping[key] === 'Client') return 'Client';
+      return 'Editeur';
+    }
+
+    function getTypeEntrepriseFromCategorie(categorie) {
+      const c = String(categorie || '');
+      if (/(^|[\s,;|\-_/()])interne(s)?($|[\s,;|\-_/()])/i.test(c)) return 'Interne';
+      if (/(^|[\s,;|\-_/()])client(s)?($|[\s,;|\-_/()])/i.test(c)) return 'Client';
+      if (/(^|[\s,;|\-_/()])editeur(s)?($|[\s,;|\-_/()])/i.test(c)) return 'Editeur';
+      return '';
+    }
+    function areAllAttendeesInternal(attendeeEmails) {
+      const emails = Array.isArray(attendeeEmails) ? attendeeEmails.filter(Boolean) : [];
+      if (!emails.length) return false;
+      return emails.every(email => INTERNAL_DOMAINS_REGEX.test(String(email || '').trim()));
+    }
+
+    function inferType(summary, description, company) {
+      const s = (cleanText(summary) + " " + cleanText(description) + " " + company).toLowerCase();
+      if (/point|suivi|faisons le point/.test(s)) return 'Suivi';
+      if (/api|endpoint|uuid|ged|interconnexion|connecteur|connexion api/.test(s)) return 'Technique API';
+      if (/partenariat|partner|qonto|regate|comptasecure|chift|agicap/.test(s)) return 'Partenariat';
+      if (/webinar|webinaire|livestorm/.test(s)) return 'Webinar / marketing';
+      return 'Autre';
+    }
+
+    function isExcludedByRules(text) {
+      const t = cleanText(text).toLowerCase();
+      return exclusions.some(item => {
+        const value = String(item.value || '').trim().toLowerCase();
+        if (!value) return false;
+        if (item.mode === 'phrase') {
+          return t.includes(value);
+        }
+        const re = new RegExp(`\\b${escapeRegex(value)}\\b`, 'i');
+        return re.test(t);
+      });
+    }
+
+    function getExclusionReason(summary, description, start, end) {
+      const text = `${cleanText(summary)} ${cleanText(description)}`;
+      const t = text.toLowerCase();
+
+      for (const item of exclusions) {
+        const value = String(item.value || '').trim().toLowerCase();
+        if (!value) continue;
+        if (item.mode === 'phrase') {
+          if (t.includes(value)) return `Règle d’exclusion : ${item.value}`;
+        } else {
+          const re = new RegExp(`\b${escapeRegex(value)}\b`, 'i');
+          if (re.test(t)) return `Règle d’exclusion : ${item.value}`;
+        }
+      }
+
+      if (!start) return 'Date de début absente';
+      if (end && (end - start) >= (24 * 60 * 60 * 1000)) return 'Durée supérieure ou égale à 1 jour';
+
+      return '';
+    }
+
+    function isExcludedByRules(text) {
+      const t = cleanText(text).toLowerCase();
+      return exclusions.some(item => {
+        const value = String(item.value || '').trim().toLowerCase();
+        if (!value) return false;
+        if (item.mode === 'phrase') {
+          return t.includes(value);
+        }
+        const re = new RegExp(`\b${escapeRegex(value)}\b`, 'i');
+        return re.test(t);
+      });
+    }
+
+    function isBusinessEvent(summary, description, start, end) {
+      const text = `${cleanText(summary)} ${cleanText(description)}`;
+      if (isExcludedByRules(text)) return false;
+      if (!start) return false;
+      if (end && (end - start) >= (24 * 60 * 60 * 1000)) return false;
+      return true;
+    }
+
+    function computeWindowStart(monthsToAnalyze) {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth() - Number(monthsToAnalyze || 6), 1, 0, 0, 0, 0);
+    }
+
+
+    
+    function summarizePivot(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const month = monthLabel(r.start);
+        const typeEntreprise = r.typeEntreprise || 'Inconnu';
+        const key = month + '|' + typeEntreprise;
+
+        if (!map.has(key)) {
+          map.set(key, { month, typeEntreprise, count: 0, ms: 0 });
+        }
+
+        const item = map.get(key);
+        item.count += 1;
+        item.ms += r.end ? Math.max(0, r.end - r.start) : 0;
+      });
+
+      return Array.from(map.values()).sort((a, b) =>
+        a.month.localeCompare(b.month) ||
+        a.typeEntreprise.localeCompare(b.typeEntreprise)
+      );
+    }
+
+function summarizeByType(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const key = r.type || 'Autre';
+        if (!map.has(key)) {
+          map.set(key, { type: key, count: 0, ms: 0 });
+        }
+        const item = map.get(key);
+        item.count += 1;
+        item.ms += r.end ? Math.max(0, r.end - r.start) : 0;
+      });
+      return Array.from(map.values()).sort((a, b) => b.ms - a.ms || b.count - a.count || a.type.localeCompare(b.type));
+    }
+
+    function summarizeByMonth(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const key = `${r.start.getFullYear()}-${pad(r.start.getMonth()+1)}`;
+        if (!map.has(key)) {
+          map.set(key, { month: monthLabel(r.start), count: 0, ms: 0 });
+        }
+        const item = map.get(key);
+        item.count += 1;
+        item.ms += r.end ? Math.max(0, r.end - r.start) : 0;
+      });
+      return Array.from(map.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([, v]) => v);
+    }
+
+    function parseEvents(icsText, monthsToAnalyze) {
+      const unfolded = unfoldICS(icsText);
+      const matches = [...unfolded.matchAll(/BEGIN:VEVENT\n([\s\S]*?)\nEND:VEVENT/g)];
+      const rawEvents = [];
+
+      for (const match of matches) {
+        const rawBlock = match[1];
+        const evt = parseEventBlock(rawBlock);
+
+        // Ignore recurrence instances/overrides to avoid duplicate rows
+        // when the same event is present both as a main VEVENT and as a
+        // RECURRENCE-ID occurrence in exported Outlook/Google ICS files.
+        if (evt['RECURRENCE-ID']) continue;
+
+        rawEvents.push({
+          rawBlock: rawBlock,
+          uid: evt.UID || '',
+          summary: evt.SUMMARY || '',
+          description: evt.DESCRIPTION || '',
+          attendeeEmails: extractAttendeeEmails(evt.ATTENDEE),
+          organizerEmail: extractMailtoEmail(evt.ORGANIZER),
+          categories: getEventCategories(evt, rawBlock),
+          start: parseICalDate(evt.DTSTART || ''),
+          end: parseICalDate(evt.DTEND || '')
+        });
+      }
+
+      const dated = rawEvents.filter(e => e.start).sort((a, b) => a.start - b.start);
+      const cutoff = computeWindowStart(monthsToAnalyze);
+      const now = new Date();
+
+      const afterDateFilter = dated.filter(e => e.start >= cutoff);
+
+      const excluded = afterDateFilter
+        .map(e => {
+          const reason = getExclusionReason(e.summary, e.description, e.start, e.end);
+          if (!reason) return null;
+          const excludedMs = businessMsForExcludedEvent(e.start, e.end);
+          return {
+            uid: e.uid,
+            start: e.start,
+            end: e.end,
+            date: e.start ? formatDate(e.start) : '',
+            heureDebut: e.start ? formatTime(e.start) : '',
+            duree: excludedMs ? formatDuration(excludedMs) : '',
+            dureeMinutes: Math.round(excludedMs / 60000),
+            heureFin: e.end ? formatTime(e.end) : '',
+            entreprise: inferCompany(e.description, e.summary, e.attendeeEmails || [], e.organizerEmail || '') || 'Interne',
+            categorie: cleanText(e.categories || ''),
+            sujet: cleanText(e.summary),
+            motif: reason
+          };
+        })
+        .filter(Boolean);
+
+      const business = afterDateFilter
+        .filter(e => isBusinessEvent(e.summary, e.description, e.start, e.end))
+        .map(e => {
+          const categorie = cleanText(e.categories || '');
+          let company = inferCompany(e.description, e.summary, e.attendeeEmails || [], e.organizerEmail || '') || 'Interne';
+          let typeEntreprise = getEntrepriseType(company);
+
+          // Règle secondaire : si tous les participants sont internes ACD, le rendez-vous est interne
+          if (areAllAttendeesInternal(e.attendeeEmails || [])) {
+            company = 'Interne';
+            typeEntreprise = 'Interne';
+          }
+
+          // PRIORITÉ ABSOLUE : la catégorie prime sur toutes les autres règles
+          const typeFromCategorie = getTypeEntrepriseFromCategorie(categorie);
+          if (typeFromCategorie === 'Interne') {
+            company = 'Interne';
+            typeEntreprise = 'Interne';
+          } else if (typeFromCategorie === 'Client' || typeFromCategorie === 'Editeur') {
+            typeEntreprise = typeFromCategorie;
+          }
+
+          // Si une entreprise externe peut être déduite via les emails
+          // (participants / organisateur) et que l'entreprise résolue reste "Interne",
+          // on force l'entreprise externe.
+          // Exception : si la catégorie impose explicitement "Interne", on conserve Interne.
+          if (normalizeKey(company) === 'INTERNE' && typeFromCategorie !== 'Interne') {
+            const externalCompany = inferCompanyFromExternalEmail(e.attendeeEmails || [], e.organizerEmail || '');
+            if (externalCompany) {
+              company = externalCompany;
+              if (!typeFromCategorie) {
+                typeEntreprise = getEntrepriseType(externalCompany);
+              }
+            }
+          }
+
+          return {
+            uid: e.uid,
+            start: e.start,
+            end: e.end,
+            date: formatDate(e.start),
+            heureDebut: e.start ? formatTime(e.start) : '',
+            duree: e.end ? formatDuration(e.end - e.start) : '',
+            dureeMinutes: e.end ? Math.round((e.end - e.start)/60000) : 0,
+            heureFin: e.end ? formatTime(e.end) : '',
+            entreprise: company,
+            typeEntreprise: typeEntreprise,
+            categorie: categorie,
+            attendeeEmails: Array.isArray(e.attendeeEmails) ? e.attendeeEmails.slice() : [],
+            organizerEmail: e.organizerEmail || '',
+            website: inferWebsite(e.description, e.summary, company, e.attendeeEmails || []),
+            sujet: cleanText(e.summary),
+            type: inferType(e.summary, e.description, company)
+          };
+        });
+
+      const dedup = [];
+      const seen = new Set();
+      for (const e of business) {
+        const key = `${e.uid}|${e.date}|${e.heureDebut}|${e.sujet}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          dedup.push(e);
+        }
+      }
+
+      const past = dedup.filter(e => e.start <= now);
+      const future = dedup.filter(e => e.start > now);
+
+      return {
+        rows: dedup,
+        past,
+        future,
+        excluded,
+        pastPivot: summarizePivot(past),
+        futurePivot: summarizePivot(future),
+        pastSummary: summarizeByMonth(past),
+        futureSummary: summarizeByMonth(future),
+        totalEvents: dated.length,
+        filteredByDate: afterDateFilter.length,
+        veventCount: matches.length,
+        cutoff,
+        now,
+        maxFutureDate: future.length ? future.reduce((max, r) => r.start > max ? r.start : max, future[0].start) : null
+      };
+    }
+
+
+    
+
+    function buildCompanyBreakdown(sourceRows, month, typeEntreprise) {
+      const filtered = sourceRows.filter(r => monthLabel(r.start) === month && (r.typeEntreprise || 'Interne') === typeEntreprise);
+      const map = new Map();
+      filtered.forEach(r => {
+        const company = r.entreprise || 'Interne';
+        const itemType = r.typeEntreprise || 'Interne';
+        const key = company + '|' + itemType;
+        if (!map.has(key)) {
+          map.set(key, { entreprise: company, typeEntreprise: itemType, count: 0, totalMinutes: 0, website: r.website || '' });
+        }
+        const item = map.get(key);
+        item.count += 1;
+        item.totalMinutes += Number(r.dureeMinutes || 0);
+        if (!item.website && r.website) item.website = r.website;
+      });
+
+      const grouped = Array.from(map.values()).sort((a, b) => b.count - a.count || a.entreprise.localeCompare(b.entreprise));
+      const companyOrder = new Map(grouped.map((item, index) => [item.entreprise, index]));
+
+      return {
+        grouped,
+        detail: filtered
+          .map(r => ({
+            entreprise: r.entreprise || 'Interne',
+            typeEntreprise: r.typeEntreprise || 'Interne',
+            date: r.date || '',
+            heureDebut: r.heureDebut || '',
+            heureFin: r.heureFin || '',
+            duree: r.duree || '',
+            categorie: r.categorie || '',
+            attendeeEmails: Array.isArray(r.attendeeEmails) ? r.attendeeEmails.slice() : [],
+            organizerEmail: r.organizerEmail || '',
+            type: r.type || '',
+            sujet: r.sujet || '',
+            uid: r.uid || '',
+            _durationMinutes: Number(r.dureeMinutes || 0),
+            _start: r.start || null,
+            _heureDebut: r.heureDebut || ''
+          }))
+          .sort((a, b) =>
+            (companyOrder.get(a.entreprise) ?? 999999) - (companyOrder.get(b.entreprise) ?? 999999) ||
+            ((a._start && b._start) ? (a._start - b._start) : 0) ||
+            (a._heureDebut || '').localeCompare(b._heureDebut || '') ||
+            (a.type || '').localeCompare(b.type || '') ||
+            (a.sujet || '').localeCompare(b.sujet || '')
+          )
+          .map(({ _start, _heureDebut, ...rest }) => rest)
+      };
+    }
+
+    function buildTotalPeriodBreakdown(sourceRows, typeEntreprise) {
+      const filtered = sourceRows.filter(r => (r.typeEntreprise || 'Interne') === typeEntreprise);
+      const map = new Map();
+      filtered.forEach(r => {
+        const company = r.entreprise || 'Interne';
+        const itemType = r.typeEntreprise || 'Interne';
+        const key = company + '|' + itemType;
+        if (!map.has(key)) {
+          map.set(key, { entreprise: company, typeEntreprise: itemType, count: 0, totalMinutes: 0, website: r.website || '' });
+        }
+        const item = map.get(key);
+        item.count += 1;
+        item.totalMinutes += Number(r.dureeMinutes || 0);
+        if (!item.website && r.website) item.website = r.website;
+      });
+
+      const grouped = Array.from(map.values()).sort((a, b) => b.count - a.count || a.entreprise.localeCompare(b.entreprise));
+      const companyOrder = new Map(grouped.map((item, index) => [item.entreprise, index]));
+
+      return {
+        grouped,
+        detail: filtered
+          .map(r => ({
+            entreprise: r.entreprise || 'Interne',
+            typeEntreprise: r.typeEntreprise || 'Interne',
+            date: r.date || '',
+            heureDebut: r.heureDebut || '',
+            heureFin: r.heureFin || '',
+            duree: r.duree || '',
+            categorie: r.categorie || '',
+            attendeeEmails: Array.isArray(r.attendeeEmails) ? r.attendeeEmails.slice() : [],
+            organizerEmail: r.organizerEmail || '',
+            type: r.type || '',
+            sujet: r.sujet || '',
+            uid: r.uid || '',
+            _durationMinutes: Number(r.dureeMinutes || 0),
+            _start: r.start || null,
+            _heureDebut: r.heureDebut || ''
+          }))
+          .sort((a, b) =>
+            (companyOrder.get(a.entreprise) ?? 999999) - (companyOrder.get(b.entreprise) ?? 999999) ||
+            ((a._start && b._start) ? (a._start - b._start) : 0) ||
+            (a._heureDebut || '').localeCompare(b._heureDebut || '') ||
+            (a.type || '').localeCompare(b.type || '') ||
+            (a.sujet || '').localeCompare(b.sujet || '')
+          )
+          .map(({ _start, _heureDebut, ...rest }) => rest)
+      };
+    }
+
+    function sanitizeFilename(value) {
+      return String(value || 'export')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase() || 'export';
+    }
+
+    function buildDetailSpreadsheetXml(rows, detailed) {
+      const headers = detailed
+        ? ['Entreprise', 'TypeEntreprise', 'Date', 'Durée', 'Type', 'Sujet']
+        : ['Entreprise', 'TypeEntreprise', 'Rendez-vous'];
+
+      const xmlRows = [
+        '<Row>' + headers.map(h => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${escXml(h)}</Data></Cell>`).join('') + '</Row>'
+      ];
+
+      rows.forEach(r => {
+        if (detailed) {
+          xmlRows.push('<Row>' +
+            `<Cell><Data ss:Type="String">${escXml(r.entreprise || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.typeEntreprise || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.date || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.duree || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.categorie || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.type || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.sujet || '')}</Data></Cell>` +
+          '</Row>');
+        } else {
+          xmlRows.push('<Row>' +
+            `<Cell><Data ss:Type="String">${escXml(r.entreprise || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="String">${escXml(r.typeEntreprise || '')}</Data></Cell>` +
+            `<Cell><Data ss:Type="Number">${Number(r.count || 0)}</Data></Cell>` +
+          '</Row>');
+        }
+      });
+
+      const columns = detailed
+        ? '<Column ss:Width="180"/><Column ss:Width="120"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="130"/><Column ss:Width="320"/>'
+        : '<Column ss:Width="180"/><Column ss:Width="120"/><Column ss:Width="100"/>';
+
+      return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal"><Font ss:FontName="Segoe UI" ss:Size="10"/></Style>
+  <Style ss:ID="sHeader"><Font ss:Bold="1" ss:FontName="Segoe UI" ss:Size="10"/><Interior ss:Color="#D9E7FF" ss:Pattern="Solid"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Détail entreprises">
+  <Table>
+   ${columns}
+   ${xmlRows.join('')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+    }
+
+    function renderRdvDetailTable() {
+      const detailed = !!rdvDetailToggle.checked;
+      rdvDetailBody.innerHTML = '';
+
+      const visibleDetailRows = currentSelectedEntreprise
+        ? currentDetailFlatRows.filter(item => (item.entreprise || '') === currentSelectedEntreprise)
+        : currentDetailFlatRows;
+
+      rdvDetailTitle.textContent = currentBaseDetailTitle;
+      rdvDetailSubtitle.textContent = currentBaseDetailSubtitle + (currentSelectedEntreprise ? ` • ${currentSelectedEntreprise}` : '');
+      currentDetailExportName = sanitizeFilename(`${currentBaseDetailTitle}_${currentBaseDetailSubtitle}${currentSelectedEntreprise ? '_' + currentSelectedEntreprise : ''}`);
+
+      if (detailed) {
+        const filteredDetailRows = applyDetailFiltersAndSort(visibleDetailRows);
+        rdvDetailHead.innerHTML = `
+          <tr>
+            <th>Entreprise</th>
+            <th>TypeEntreprise</th>
+            <th class="sortable-detail" data-sort-key="date">Date</th>
+            <th class="sortable-detail" data-sort-key="heure">Heure</th>
+            <th class="sortable-detail" data-sort-key="duree">Durée</th>
+            <th class="sortable-detail" data-sort-key="categorie">Catégorie</th>
+            <th class="sortable-detail" data-sort-key="email">Email</th>
+            <th class="sortable-detail" data-sort-key="type">Type</th>
+            <th class="sortable-detail" data-sort-key="sujet">Sujet</th>
+          </tr>
+          <tr class="detail-filter-row">
+            <th></th>
+            <th></th>
+            <th><input class="detail-filter-input" data-filter-key="date" value="${escAttr(detailFilterState.date)}" placeholder="Filtrer"></th>
+            <th><input class="detail-filter-input" data-filter-key="heure" value="${escAttr(detailFilterState.heure)}" placeholder="Filtrer"></th>
+            <th><input class="detail-filter-input" data-filter-key="duree" value="${escAttr(detailFilterState.duree)}" placeholder="Filtrer"></th>
+            <th><input class="detail-filter-input" data-filter-key="categorie" value="${escAttr(detailFilterState.categorie)}" placeholder="Filtrer"></th>
+            <th><input class="detail-filter-input" data-filter-key="email" value="${escAttr(detailFilterState.email)}" placeholder="Filtrer"></th>
+            <th><input class="detail-filter-input" data-filter-key="type" value="${escAttr(detailFilterState.type)}" placeholder="Filtrer"></th>
+            <th>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input class="detail-filter-input" data-filter-key="sujet" value="${escAttr(detailFilterState.sujet)}" placeholder="Filtrer">
+                ${ (detailFilterState.date || detailFilterState.heure || detailFilterState.duree || detailFilterState.categorie || detailFilterState.email || detailFilterState.type || detailFilterState.sujet)
+                  ? '<button type="button" class="success inline-action-btn reset-detail-filters-btn">Réinitialiser</button>'
+                  : ''
+                }
+              </div>
+            </th>
+          </tr>`;
+        let lastEntreprise = null;
+        let lastTypeEntreprise = null;
+
+        filteredDetailRows.forEach((item, index) => {
+          const showEntreprise = item.entreprise !== lastEntreprise || item.typeEntreprise !== lastTypeEntreprise;
+          const rowId = `detail_${index}_${String(item.uid || item.date || '').replace(/[^a-z0-9_-]/gi, '_')}`;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${showEntreprise ? (item.entreprise || '') : ''}</td>
+            <td>${showEntreprise ? (item.typeEntreprise || '') : ''}</td>
+            <td>${item.date || ''}</td>
+            <td>${item.heureDebut || ''}${item.heureFin ? ' - ' + item.heureFin : ''}</td>
+            <td>${item.duree || ''}</td>
+            <td>${item.categorie || ''}</td>
+            <td>${buildEmailCellHtml(item, rowId)}</td>
+            <td>${item.type || ''}</td>
+            <td>${item.sujet || ''}</td>
+          `;
+          rdvDetailBody.appendChild(tr);
+
+          lastEntreprise = item.entreprise;
+          lastTypeEntreprise = item.typeEntreprise;
+        });
+
+        rdvDetailBody.querySelectorAll('.email-more-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const rowId = btn.getAttribute('data-row-id');
+            const extra = document.getElementById(`email-extra-${rowId}`);
+            if (!extra) return;
+            const isHidden = extra.classList.contains('hidden');
+            extra.classList.toggle('hidden', !isHidden);
+            btn.textContent = isHidden ? '−' : '+';
+          });
+        });
+
+        if (!filteredDetailRows.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="9" class="muted">Aucune entreprise pour cette sélection.</td>';
+          rdvDetailBody.appendChild(tr);
+        }
+
+        rdvDetailHead.querySelectorAll('.sortable-detail').forEach(th => {
+          th.style.cursor = 'pointer';
+          th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (detailSortState.key === key) {
+              detailSortState.dir = detailSortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+              detailSortState.key = key;
+              detailSortState.dir = 'asc';
+            }
+            renderRdvDetailTable();
+          });
+        });
+
+        rdvDetailHead.querySelectorAll('.detail-filter-input').forEach(input => {
+          input.addEventListener('input', () => {
+            const key = input.getAttribute('data-filter-key');
+            const currentValue = String(input.value || '');
+            const caretStart = input.selectionStart;
+            const caretEnd = input.selectionEnd;
+
+            detailFilterState[key] = currentValue.trim().toLowerCase();
+            renderRdvDetailTable();
+
+            const newInput = rdvDetailHead.querySelector(`.detail-filter-input[data-filter-key="${key}"]`);
+            if (newInput) {
+              newInput.focus();
+              const posStart = Math.min(caretStart ?? currentValue.length, newInput.value.length);
+              const posEnd = Math.min(caretEnd ?? currentValue.length, newInput.value.length);
+              newInput.setSelectionRange(posStart, posEnd);
+            }
+          });
+        });
+
+        const resetDetailBtn = rdvDetailHead.querySelector('.reset-detail-filters-btn');
+        if (resetDetailBtn) {
+          resetDetailBtn.addEventListener('click', () => {
+            detailFilterState = { date: '', heure: '', duree: '', categorie: '', email: '', type: '', sujet: '' };
+            renderRdvDetailTable();
+          });
+        }
+      } else {
+        const isEditeurList = (currentDetailContext && currentDetailContext.typeEntreprise === 'Editeur');
+        const isClientList = (currentDetailContext && currentDetailContext.typeEntreprise === 'Client');
+        const filteredGroupedRows = applyGroupedFiltersAndSort(currentDetailGroupedRows);
+
+        rdvDetailHead.innerHTML = `
+          <tr>
+            <th>Détail</th>
+            <th class="sortable-grouped" data-sort-key="entreprise">Entreprise</th>
+            <th class="sortable-grouped" data-sort-key="typeEntreprise">TypeEntreprise</th>
+            <th class="sortable-grouped" data-sort-key="count">Rendez-vous</th>
+            <th class="sortable-grouped" data-sort-key="totalMinutes">Temps total</th>
+            <th>Action</th>
+          </tr>
+          <tr class="detail-filter-row">
+            <th></th>
+            <th><input class="grouped-filter-input" data-filter-key="entreprise" value="${escAttr(groupedFilterState.entreprise)}" placeholder="Filtrer"></th>
+            <th><input class="grouped-filter-input" data-filter-key="typeEntreprise" value="${escAttr(groupedFilterState.typeEntreprise)}" placeholder="Filtrer"></th>
+            <th><input class="grouped-filter-input" data-filter-key="rendezvous" value="${escAttr(groupedFilterState.rendezvous)}" placeholder="Filtrer"></th>
+            <th><input class="grouped-filter-input" data-filter-key="temps" value="${escAttr(groupedFilterState.temps)}" placeholder="Filtrer"></th>
+            <th>
+              ${ (groupedFilterState.entreprise || groupedFilterState.typeEntreprise || groupedFilterState.rendezvous || groupedFilterState.temps)
+                ? '<button type="button" class="success inline-action-btn reset-grouped-filters-btn">Réinitialiser</button>'
+                : ''
+              }
+            </th>
+          </tr>`;
+
+        filteredGroupedRows.forEach(item => {
+          const tr = document.createElement('tr');
+          const entrepriseLabel = item.entreprise || '';
+          const entrepriseAttr = String(entrepriseLabel).replace(/"/g, '&quot;');
+          const detailHtml = `<button class="secondary inline-action-btn company-detail-btn" data-entreprise="${entrepriseAttr}">Détail</button>`;
+          const entrepriseHtml = item.website
+            ? `<a class="company-link" href="${item.website}" target="_blank" rel="noopener noreferrer">${entrepriseLabel}</a>`
+            : `<span class="company-link disabled">${entrepriseLabel}</span>`;
+
+          let actionHtml = '';
+          if (isEditeurList) {
+            actionHtml = `<button class="primary inline-action-btn company-client-btn" data-entreprise="${entrepriseAttr}">Définir comme client</button>`;
+          } else if (isClientList) {
+            actionHtml = `<button class="danger inline-action-btn company-remove-client-btn" data-entreprise="${entrepriseAttr}">Retirer des clients</button>`;
+          }
+
+          tr.innerHTML = `
+            <td>${detailHtml}</td>
+            <td>${entrepriseHtml}</td>
+            <td>${item.typeEntreprise || ''}</td>
+            <td>${item.count || 0}</td>
+            <td>${formatHoursFromMinutes(item.totalMinutes || 0)}</td>
+            <td>${actionHtml}</td>
+          `;
+          rdvDetailBody.appendChild(tr);
+        });
+
+        if (!filteredGroupedRows.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" class="muted">Aucune entreprise pour cette sélection.</td>';
+          rdvDetailBody.appendChild(tr);
+        }
+
+        rdvDetailHead.querySelectorAll('.sortable-grouped').forEach(th => {
+          th.style.cursor = 'pointer';
+          th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (groupedSortState.key === key) {
+              groupedSortState.dir = groupedSortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+              groupedSortState.key = key;
+              groupedSortState.dir = key === 'count' || key === 'totalMinutes' ? 'desc' : 'asc';
+            }
+            renderRdvDetailTable();
+          });
+        });
+
+        rdvDetailHead.querySelectorAll('.grouped-filter-input').forEach(input => {
+          input.addEventListener('input', () => {
+            const key = input.getAttribute('data-filter-key');
+            const currentValue = String(input.value || '');
+            const caretStart = input.selectionStart;
+            const caretEnd = input.selectionEnd;
+
+            groupedFilterState[key] = currentValue.trim().toLowerCase();
+            renderRdvDetailTable();
+
+            const newInput = rdvDetailHead.querySelector(`.grouped-filter-input[data-filter-key="${key}"]`);
+            if (newInput) {
+              newInput.focus();
+              const posStart = Math.min(caretStart ?? currentValue.length, newInput.value.length);
+              const posEnd = Math.min(caretEnd ?? currentValue.length, newInput.value.length);
+              newInput.setSelectionRange(posStart, posEnd);
+            }
+          });
+        });
+
+        const resetGroupedBtn = rdvDetailHead.querySelector('.reset-grouped-filters-btn');
+        if (resetGroupedBtn) {
+          resetGroupedBtn.addEventListener('click', () => {
+            groupedFilterState = { entreprise: '', typeEntreprise: '', rendezvous: '', temps: '' };
+            renderRdvDetailTable();
+          });
+        }
+
+        rdvDetailBody.querySelectorAll('.company-detail-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            currentSelectedEntreprise = btn.dataset.entreprise || null;
+            rdvDetailToggle.checked = true;
+            renderRdvDetailTable();
+          });
+        });
+
+        rdvDetailBody.querySelectorAll('.company-client-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const entreprise = normalizeKey(btn.dataset.entreprise || '');
+            if (!entreprise) return;
+
+            entrepriseMapping[entreprise] = 'Client';
+            saveMapping();
+            renderMappingTable();
+
+            if (window._lastResult) {
+              renderAllFromResult(window._lastResult);
+            }
+            refreshDetailModalFromContext();
+          });
+        });
+
+        rdvDetailBody.querySelectorAll('.company-remove-client-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const entreprise = normalizeKey(btn.dataset.entreprise || '');
+            if (!entreprise) return;
+
+            delete entrepriseMapping[entreprise];
+            saveMapping();
+            renderMappingTable();
+
+            if (window._lastResult) {
+              renderAllFromResult(window._lastResult);
+            }
+            refreshDetailModalFromContext();
+          });
+        });
+      }
+
+      currentDetailExportRows = detailed ? applyDetailFiltersAndSort(visibleDetailRows).slice() : applyGroupedFiltersAndSort(currentDetailGroupedRows).slice();
+    }
+
+        function exportDetailRowsToExcel() {
+      const grouped = currentDetailGroupedRows || [];
+      const detailedRows = currentDetailFlatRows || [];
+
+      const buildSheet = (rows, detailed, sheetName) => {
+        const headers = detailed
+          ? ['Entreprise', 'TypeEntreprise', 'Date', 'Heure', 'Durée', 'Catégorie', 'Email', 'Type', 'Sujet']
+          : ['Entreprise', 'TypeEntreprise', 'Rendez-vous', 'Temps total'];
+
+        const xmlRows = [
+          '<Row>' + headers.map(h => `<Cell ss:StyleID="sHeader"><Data ss:Type="String">${escXml(h)}</Data></Cell>`).join('') + '</Row>'
+        ];
+
+        rows.forEach(r => {
+          if (detailed) {
+            xmlRows.push('<Row>' +
+              `<Cell><Data ss:Type="String">${escXml(r.entreprise || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.typeEntreprise || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.date || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.duree || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.type || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.sujet || '')}</Data></Cell>` +
+            '</Row>');
+          } else {
+            xmlRows.push('<Row>' +
+              `<Cell><Data ss:Type="String">${escXml(r.entreprise || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(r.typeEntreprise || '')}</Data></Cell>` +
+              `<Cell><Data ss:Type="Number">${Number(r.count || 0)}</Data></Cell>` +
+              `<Cell><Data ss:Type="String">${escXml(formatHoursFromMinutes(r.totalMinutes || 0))}</Data></Cell>` +
+            '</Row>');
+          }
+        });
+
+        const columns = detailed
+          ? '<Column ss:Width="180"/><Column ss:Width="120"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="90"/><Column ss:Width="160"/><Column ss:Width="300"/><Column ss:Width="130"/><Column ss:Width="320"/>'
+          : '<Column ss:Width="180"/><Column ss:Width="120"/><Column ss:Width="100"/><Column ss:Width="100"/>';
+
+        return `
+ <Worksheet ss:Name="${escXml(sheetName)}">
+  <Table>
+   ${columns}
+   ${xmlRows.join('')}
+  </Table>
+ </Worksheet>`;
+      };
+
+      const workbook = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal"><Font ss:FontName="Segoe UI" ss:Size="10"/></Style>
+  <Style ss:ID="sHeader"><Font ss:Bold="1" ss:FontName="Segoe UI" ss:Size="10"/><Interior ss:Color="#D9E7FF" ss:Pattern="Solid"/></Style>
+ </Styles>
+ ${buildSheet(grouped, false, 'Synthèse')}
+ ${buildSheet(detailedRows, true, 'Détail')}
+</Workbook>`;
+
+      const exportBlob = new Blob([workbook], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(exportBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentDetailExportName || 'detail_entreprises'}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+
+    function formatHoursFromMinutes(minutes) {
+      return hoursFromMs((Number(minutes || 0)) * 60000);
+    }
+
+    function getEmailListForDisplay(item) {
+      const organizer = item && item.organizerEmail ? String(item.organizerEmail).trim() : '';
+      const attendees = item && Array.isArray(item.attendeeEmails)
+        ? item.attendeeEmails.map(v => String(v || '').trim()).filter(Boolean)
+        : [];
+      const dedupedAttendees = attendees.filter(v => v && v !== organizer);
+      return {
+        organizer,
+        attendees: dedupedAttendees
+      };
+    }
+
+    function getAllEmails(item) {
+      const data = getEmailListForDisplay(item);
+      return [data.organizer, ...(data.attendees || [])].filter(Boolean);
+    }
+
+    function escAttr(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function getDetailComparableValue(item, key) {
+      if (key === 'date') return String(item.date || '');
+      if (key === 'heure') return String(item.heureDebut || '');
+      if (key === 'duree') return Number(item._durationMinutes || 0);
+      if (key === 'categorie') return String(item.categorie || '');
+      if (key === 'email') return getAllEmails(item).join(', ');
+      if (key === 'type') return String(item.type || '');
+      if (key === 'sujet') return String(item.sujet || '');
+      return '';
+    }
+
+    function applyDetailFiltersAndSort(rows) {
+      let out = rows.slice();
+
+      out = out.filter(item => {
+        const emails = getAllEmails(item).join(', ').toLowerCase();
+        return (!detailFilterState.date || String(item.date || '').toLowerCase().includes(detailFilterState.date)) &&
+               (!detailFilterState.heure || (`${item.heureDebut || ''}${item.heureFin ? ' - ' + item.heureFin : ''}`).toLowerCase().includes(detailFilterState.heure)) &&
+               (!detailFilterState.duree || String(item.duree || '').toLowerCase().includes(detailFilterState.duree)) &&
+               (!detailFilterState.categorie || String(item.categorie || '').toLowerCase().includes(detailFilterState.categorie)) &&
+               (!detailFilterState.email || emails.includes(detailFilterState.email)) &&
+               (!detailFilterState.type || String(item.type || '').toLowerCase().includes(detailFilterState.type)) &&
+               (!detailFilterState.sujet || String(item.sujet || '').toLowerCase().includes(detailFilterState.sujet));
+      });
+
+      out.sort((a, b) => {
+        const av = getDetailComparableValue(a, detailSortState.key);
+        const bv = getDetailComparableValue(b, detailSortState.key);
+
+        let cmp = 0;
+        if (typeof av === 'number' && typeof bv === 'number') {
+          cmp = av - bv;
+        } else {
+          cmp = String(av).localeCompare(String(bv), 'fr', { sensitivity: 'base' });
+        }
+        return detailSortState.dir === 'asc' ? cmp : -cmp;
+      });
+
+      return out;
+    }
+
+    function getGroupedComparableValue(item, key) {
+      if (key === 'entreprise') return String(item.entreprise || '');
+      if (key === 'typeEntreprise') return String(item.typeEntreprise || '');
+      if (key === 'count') return Number(item.count || 0);
+      if (key === 'totalMinutes') return Number(item.totalMinutes || 0);
+      return '';
+    }
+
+    function applyGroupedFiltersAndSort(rows) {
+      let out = rows.slice();
+
+      out = out.filter(item =>
+        (!groupedFilterState.entreprise || String(item.entreprise || '').toLowerCase().includes(groupedFilterState.entreprise)) &&
+        (!groupedFilterState.typeEntreprise || String(item.typeEntreprise || '').toLowerCase().includes(groupedFilterState.typeEntreprise)) &&
+        (!groupedFilterState.rendezvous || String(item.count || '').toLowerCase().includes(groupedFilterState.rendezvous)) &&
+        (!groupedFilterState.temps || formatHoursFromMinutes(item.totalMinutes || 0).toLowerCase().includes(groupedFilterState.temps))
+      );
+
+      out.sort((a, b) => {
+        const av = getGroupedComparableValue(a, groupedSortState.key);
+        const bv = getGroupedComparableValue(b, groupedSortState.key);
+
+        let cmp = 0;
+        if (typeof av === 'number' && typeof bv === 'number') {
+          cmp = av - bv;
+        } else {
+          cmp = String(av).localeCompare(String(bv), 'fr', { sensitivity: 'base' });
+        }
+        return groupedSortState.dir === 'asc' ? cmp : -cmp;
+      });
+
+      return out;
+    }
+
+    function buildEmailCellHtml(item, rowId) {
+      const data = getEmailListForDisplay(item);
+      const organizer = data.organizer;
+      const attendees = data.attendees;
+
+      if (!organizer && !attendees.length) return '';
+
+      const visibleLines = [];
+      if (organizer) {
+        visibleLines.push(`<div class="email-line email-organizer"><strong>${organizer}</strong></div>`);
+      }
+      if (attendees.length) {
+        visibleLines.push(`<div class="email-line">${attendees[0]}</div>`);
+      }
+
+      const hiddenAttendees = attendees.slice(1);
+      const hiddenHtml = hiddenAttendees.length
+        ? `<div class="email-extra hidden" id="email-extra-${rowId}">${hiddenAttendees.map(v => `<div class="email-line">${v}</div>`).join('')}</div>`
+        : '';
+
+      const copyEmails = [organizer, ...attendees].filter(Boolean).join(', ');
+      const controls = `
+        <div class="email-actions">
+          ${hiddenAttendees.length ? `<button class="secondary email-more-btn" type="button" data-row-id="${rowId}" title="Afficher les autres participants">+</button>` : ''}
+          <button class="copy-btn" data-emails="${String(copyEmails).replace(/"/g, '&quot;')}">📋</button>
+        </div>
+      `;
+
+      return `
+        <div class="email-cell email-cell-collapsible" data-row-id="${rowId}">
+          <div class="email-text">
+            ${visibleLines.join('')}
+            ${hiddenHtml}
+            ${controls}
+          </div>
+        </div>
+      `;
+    }
+
+
+    function buildContextDataFromCurrentSource() {
+      if (!currentDetailContext || !window._lastResult) return null;
+
+      const sourceRows = currentDetailContext.period === 'future'
+        ? filterRowsBySelectedTypes(window._lastResult.future || [])
+        : filterRowsBySelectedTypes(window._lastResult.past || []);
+
+      if (currentDetailContext.scope === 'total') {
+        return buildTotalPeriodBreakdown(sourceRows, currentDetailContext.typeEntreprise);
+      }
+
+      if (currentDetailContext.scope === 'month') {
+        return buildCompanyBreakdown(sourceRows, currentDetailContext.month, currentDetailContext.typeEntreprise);
+      }
+
+      return null;
+    }
+
+    function refreshDetailModalFromContext() {
+      const data = buildContextDataFromCurrentSource();
+      if (!data) return;
+
+      currentDetailGroupedRows = Array.isArray(data.grouped) ? data.grouped.slice() : [];
+      currentDetailFlatRows = Array.isArray(data.detail) ? data.detail.slice() : [];
+
+      // Si la liste devient vide après reclassement, fermer la fenêtre courante.
+      if (!currentDetailGroupedRows.length && !currentDetailFlatRows.length) {
+        closeRdvDetailModal();
+        return;
+      }
+
+      // Si l'entreprise sélectionnée n'existe plus dans le contexte courant, sortir du détail ciblé.
+      if (currentSelectedEntreprise) {
+        const stillExists = currentDetailFlatRows.some(item => (item.entreprise || '') === currentSelectedEntreprise);
+        if (!stillExists) {
+          currentSelectedEntreprise = null;
+          rdvDetailToggle.checked = false;
+        }
+      }
+
+      renderRdvDetailTable();
+    }
+
+    function updateToggleAllButton(selector) {
+      const btn = document.querySelector('.toggle-all-btn[data-target="' + selector + '"]');
+      const tbody = document.querySelector(selector);
+      if (!btn || !tbody) return;
+
+      const monthHeaders = Array.from(tbody.querySelectorAll('tr.month-header-row')).filter(row => !row.classList.contains('total-row'));
+      if (!monthHeaders.length) {
+        btn.textContent = 'Tout déplier';
+        return;
+      }
+
+      const allOpen = monthHeaders.every(row => {
+        const toggle = row.querySelector('.month-toggle');
+        return toggle && toggle.classList.contains('open');
+      });
+
+      btn.textContent = allOpen ? 'Tout replier' : 'Tout déplier';
+    }
+
+    function setAllMonthsExpanded(selector, expanded) {
+      const tbody = document.querySelector(selector);
+      if (!tbody) return;
+
+      const monthHeaders = Array.from(tbody.querySelectorAll('tr.month-header-row')).filter(row => !row.classList.contains('total-row'));
+
+      monthHeaders.forEach(headerTr => {
+        const month = headerTr.dataset.month;
+        const toggle = headerTr.querySelector('.month-toggle');
+        if (toggle) {
+          toggle.classList.toggle('open', expanded);
+        }
+
+        if (month) {
+          tbody.querySelectorAll('tr.month-detail-row[data-month="' + CSS.escape(month) + '"]')
+            .forEach(row => row.classList.toggle('hidden', !expanded));
+        }
+      });
+
+      const monthStateKey = 'pivotMonthState_' + selector.replace(/[^a-z0-9]/gi, '_');
+      const monthStates = pivotMonthStates[monthStateKey] || {};
+
+      monthHeaders.forEach(headerTr => {
+        if (headerTr.dataset.month) {
+          monthStates[headerTr.dataset.month] = expanded;
+        }
+      });
+      localStorage.setItem(monthStateKey, JSON.stringify(monthStates));
+
+      updateToggleAllButton(selector);
+    }
+
+    function openRdvDetailModal(title, subtitle, data, context = null) {
+      currentBaseDetailTitle = title;
+      currentBaseDetailSubtitle = subtitle || '';
+      currentDetailContext = context;
+      currentSelectedEntreprise = null;
+      rdvDetailTitle.textContent = currentBaseDetailTitle;
+      rdvDetailSubtitle.textContent = currentBaseDetailSubtitle;
+      currentDetailExportName = sanitizeFilename(`${title}_${subtitle}`);
+      currentDetailGroupedRows = Array.isArray(data?.grouped) ? data.grouped.slice() : [];
+      currentDetailFlatRows = Array.isArray(data?.detail) ? data.detail.slice() : [];
+      renderRdvDetailTable();
+      rdvDetailModal.classList.add('open');
+    }
+
+    function closeRdvDetailModal() {
+      rdvDetailModal.classList.remove('open');
+      rdvDetailToggle.checked = false;
+      currentSelectedEntreprise = null;
+      currentDetailContext = null;
+    }
+
+    function renderPivotTable(rows, selector) {
+      const tbody = document.querySelector(selector);
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const groups = new Map();
+      rows.forEach(r => {
+        if (!groups.has(r.month)) {
+          groups.set(r.month, []);
+        }
+        groups.get(r.month).push(r);
+      });
+
+      function monthKey(label){
+        const monthMap = {
+          'janvier': 1,
+          'février': 2,
+          'fevrier': 2,
+          'mars': 3,
+          'avril': 4,
+          'mai': 5,
+          'juin': 6,
+          'juillet': 7,
+          'août': 8,
+          'aout': 8,
+          'septembre': 9,
+          'octobre': 10,
+          'novembre': 11,
+          'décembre': 12,
+          'decembre': 12
+        };
+        const m = String(label || '').trim().toLowerCase().match(/^([a-zéûîôàèùç]+)\s+(\d{4})$/i);
+        if (!m) return 0;
+        const month = monthMap[m[1]] || 0;
+        const year = Number(m[2]) || 0;
+        return year * 100 + month;
+      }
+
+      const typeOrder = { 'Editeur': 1, 'Client': 2, 'Interne': 3 };
+      const monthStateKey = 'pivotMonthState_' + selector.replace(/[^a-z0-9]/gi, '_');
+      const monthStates = pivotMonthStates[monthStateKey] || {};
+
+      const isFuture = selector.includes('future');
+      const sortedMonths = Array.from(groups.keys()).sort((a,b)=> 
+        isFuture ? monthKey(a) - monthKey(b) : monthKey(b) - monthKey(a)
+      );
+
+      const sourceRows = selector.includes('future')
+        ? filterRowsBySelectedTypes(window._lastResult?.future || [])
+        : filterRowsBySelectedTypes(window._lastResult?.past || []);
+
+      sortedMonths.forEach(month => {
+        const monthRows = groups.get(month);
+
+        monthRows.sort((a,b)=>{
+          const ta = a.typeEntreprise || 'Interne';
+          const tb = b.typeEntreprise || 'Interne';
+          return (typeOrder[ta]||99) - (typeOrder[tb]||99);
+        });
+
+        const totalCount = monthRows.reduce((sum, r) => sum + r.count, 0);
+        const totalMs = monthRows.reduce((sum, r) => sum + r.ms, 0);
+        const isOpen = monthStates[month] === true;
+
+        const headerTr = document.createElement('tr');
+        headerTr.className = 'month-header-row';
+        headerTr.dataset.month = month;
+        headerTr.innerHTML = '<td><span class="month-toggle ' + (isOpen ? 'open' : '') + '">▶</span>' + month + '</td>' +
+                             '<td></td>' +
+                             '<td>' + totalCount + '</td>' +
+                             '<td>' + hoursFromMs(totalMs) + '</td>';
+        tbody.appendChild(headerTr);
+
+        monthRows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = 'month-detail-row' + (isOpen ? '' : ' hidden');
+          tr.dataset.month = month;
+
+          const countHtml = '<span class="clickable-count" data-month="' + month + '" data-type="' + (r.typeEntreprise || 'Interne') + '">' + r.count + '</span>';
+
+          [
+            '',
+            (function(){
+              const t = r.typeEntreprise || 'Interne';
+              let cls = 'badge-interne';
+              if(t==='Editeur') cls='badge-editeur';
+              else if(t==='Client') cls='badge-client';
+              return '<span class="badge '+cls+'">'+t+'</span>';
+            })(),
+            countHtml,
+            hoursFromMs(r.ms)
+          ].forEach((val, idx) => {
+            const td = document.createElement('td');
+            if(idx===1 || idx===2){
+              td.innerHTML = val;
+            }else{
+              td.textContent = val;
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        headerTr.addEventListener('click', () => {
+          const currentlyOpen = headerTr.querySelector('.month-toggle').classList.contains('open');
+          const newOpen = !currentlyOpen;
+          headerTr.querySelector('.month-toggle').classList.toggle('open', newOpen);
+          tbody.querySelectorAll('tr.month-detail-row[data-month="' + CSS.escape(month) + '"]')
+            .forEach(row => row.classList.toggle('hidden', !newOpen));
+          monthStates[month] = newOpen;
+          pivotMonthStates[monthStateKey] = monthStates;
+          updateToggleAllButton(selector);
+        });
+      });
+
+      const totalPeriodCount = rows.reduce((sum, r) => sum + r.count, 0);
+      const totalPeriodMs = rows.reduce((sum, r) => sum + r.ms, 0);
+      const totalByType = {};
+      rows.forEach(r => {
+        const key = r.typeEntreprise || 'Interne';
+        if (!totalByType[key]) {
+          totalByType[key] = { typeEntreprise: key, count: 0, ms: 0 };
+        }
+        totalByType[key].count += r.count;
+        totalByType[key].ms += r.ms;
+      });
+
+      const totalHeaderTr = document.createElement('tr');
+      totalHeaderTr.className = 'month-header-row total-row';
+      totalHeaderTr.innerHTML = '<td><span class="month-toggle open">▶</span>Total de la période</td>' +
+                                '<td></td>' +
+                                '<td>' + totalPeriodCount + '</td>' +
+                                '<td>' + hoursFromMs(totalPeriodMs) + '</td>';
+      tbody.appendChild(totalHeaderTr);
+
+      Object.values(totalByType)
+        .sort((a,b) => (typeOrder[a.typeEntreprise]||99) - (typeOrder[b.typeEntreprise]||99))
+        .forEach(item => {
+          const tr = document.createElement('tr');
+          tr.className = 'month-detail-row total-period-detail';
+
+          const countHtml = '<span class="clickable-count" data-total-period="1" data-type="' + (item.typeEntreprise || 'Interne') + '">' + item.count + '</span>';
+
+          [
+            '',
+            (function(){
+              const t = item.typeEntreprise || 'Interne';
+              let cls = 'badge-interne';
+              if(t==='Editeur') cls='badge-editeur';
+              else if(t==='Client') cls='badge-client';
+              return '<span class="badge '+cls+'">'+t+'</span>';
+            })(),
+            countHtml,
+            hoursFromMs(item.ms)
+          ].forEach((val, idx) => {
+            const td = document.createElement('td');
+            if (idx === 1 || idx === 2) {
+              td.innerHTML = val;
+            } else {
+              td.textContent = val;
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+      totalHeaderTr.addEventListener('click', () => {
+        const currentlyOpen = totalHeaderTr.querySelector('.month-toggle').classList.contains('open');
+        const newOpen = !currentlyOpen;
+        totalHeaderTr.querySelector('.month-toggle').classList.toggle('open', newOpen);
+        tbody.querySelectorAll('tr.total-period-detail')
+          .forEach(row => row.classList.toggle('hidden', !newOpen));
+      });
+
+      tbody.querySelectorAll('.clickable-count').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const typeEntreprise = el.dataset.type || 'Interne';
+
+          if (el.dataset.totalPeriod === '1') {
+            const period = selector.includes('future') ? 'future' : 'past';
+            const data = buildTotalPeriodBreakdown(sourceRows, typeEntreprise);
+            const title = 'Entreprises - Total de la période';
+            const subtitle = `${typeEntreprise} • ${period === 'future' ? 'Période à venir' : 'Période passée'}`;
+            openRdvDetailModal(title, subtitle, data, { scope: 'total', period, typeEntreprise });
+            return;
+          }
+
+          const month = el.dataset.month;
+          const period = selector.includes('future') ? 'future' : 'past';
+          const data = buildCompanyBreakdown(sourceRows, month, typeEntreprise);
+          const title = `Entreprises - ${month}`;
+          const subtitle = `${typeEntreprise} • ${period === 'future' ? 'Période à venir' : 'Période passée'}`;
+          openRdvDetailModal(title, subtitle, data, { scope: 'month', month, period, typeEntreprise });
+        });
+      });
+
+      updateToggleAllButton(selector);
+    }
+
+    function renderSummaryTable(rows, tbodySelector) {
+      const tbody = document.querySelector(tbodySelector);
+      const checkedTypes = Array.from(document.querySelectorAll('.type-filter:checked')).map(el => el.value);
+      rows = rows.filter(r => checkedTypes.includes(r.typeEntreprise || 'Interne'));
+      tbody.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        [r.month, r.count, hoursFromMs(r.ms)].forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function totalMs(rows) {
+      return rows.reduce((sum, r) => sum + (r.end ? Math.max(0, r.end - r.start) : 0), 0);
+    }
+
+    function businessMsForExcludedEvent(start, end) {
+      if (!start || !end || end <= start) return 0;
+
+      const MS_PER_HOUR = 60 * 60 * 1000;
+      const BUSINESS_DAY_MS = 7 * MS_PER_HOUR;
+
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+      // Événement sur une seule journée : durée réelle si jour ouvrable, 0 le week-end
+      if (startDay.getTime() === endDay.getTime()) {
+        const day = start.getDay();
+        if (day === 0 || day === 6) return 0;
+        return Math.max(0, end - start);
+      }
+
+      // Événement multi-jours exclu : 7h par jour ouvrable, hors week-end
+      let total = 0;
+      const cursor = new Date(startDay);
+
+      while (cursor <= endDay) {
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) {
+          total += BUSINESS_DAY_MS;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      return total;
+    }
+
+    function renderExcludedTable(rows) {
+      const tbody = document.querySelector('#excludedTable tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="7" class="muted">Aucun rendez-vous exclu pour la période analysée.</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.date || ''}</td>
+          <td>${r.heureDebut || ''}${r.heureFin ? ' - ' + r.heureFin : ''}</td>
+          <td>${r.duree || ''}</td>
+          <td>${r.entreprise || ''}</td>
+          <td>${r.categorie || ''}</td>
+          <td>${r.sujet || ''}</td>
+          <td>${r.motif || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateExcludedStats(rows, showBlock) {
+      document.getElementById('excludedEvents').textContent = rows.length;
+
+      const totalMinutes = rows.reduce((sum, r) => sum + (r.dureeMinutes || 0), 0);
+      const hours = totalMinutes / 60;
+      document.getElementById('excludedHours').textContent = hours.toFixed(1) + ' h';
+
+      excludedBlock.style.display = showBlock ? '' : 'none';
+    }
+
+    function getSelectedTypes() {
+      const container = document.getElementById('globalTypeFilters');
+      if (!container) return ['Editeur', 'Client', 'Interne'];
+      const values = Array.from(container.querySelectorAll('.type-filter:checked')).map(el => String(el.value || '').trim());
+      return [...new Set(values)];
+    }
+
+    function normalizeRowForCurrentMapping(row) {
+      const categorie = row.categorie || '';
+      const typeFromCategorie = getTypeEntrepriseFromCategorie(categorie);
+      const entreprise = row.entreprise || 'Interne';
+
+      // PRIORITÉ ABSOLUE : la catégorie prime sur toutes les autres règles
+      if (typeFromCategorie === 'Interne') {
+        return { ...row, entreprise: 'Interne', typeEntreprise: 'Interne', website: '' };
+      }
+      if (typeFromCategorie === 'Client' || typeFromCategorie === 'Editeur') {
+        let resolvedEntreprise = entreprise;
+        if (normalizeKey(resolvedEntreprise) === 'INTERNE') {
+          const externalCompany = inferCompanyFromExternalEmail(row.attendeeEmails || [], row.organizerEmail || '');
+          if (externalCompany) {
+            resolvedEntreprise = externalCompany;
+          }
+        }
+        return { ...row, entreprise: resolvedEntreprise, typeEntreprise: typeFromCategorie };
+      }
+
+      if (areAllAttendeesInternal(row.attendeeEmails || [])) {
+        return { ...row, entreprise: 'Interne', typeEntreprise: 'Interne', website: '' };
+      }
+
+      // Règle spécifique ACD Groupe
+      if (/^ACD[-\s]?GROUPE$/i.test(normalizeKey(entreprise)) || normalizeKey(entreprise) === 'ACD' || normalizeKey(entreprise) === 'ACDGROUPE') {
+        return { ...row, entreprise: 'Interne', typeEntreprise: 'Interne', website: '' };
+      }
+
+      // Si l'entreprise reste "Interne" mais qu'un domaine externe est détecté,
+      // on force cette entreprise externe.
+      if (normalizeKey(entreprise) === 'INTERNE') {
+        const externalCompany = inferCompanyFromExternalEmail(row.attendeeEmails || [], row.organizerEmail || '');
+        if (externalCompany) {
+          return { ...row, entreprise: externalCompany, typeEntreprise: getEntrepriseType(externalCompany) };
+        }
+      }
+
+      return { ...row, entreprise, typeEntreprise: getEntrepriseType(entreprise) };
+    }
+
+    function filterRowsBySelectedTypes(rows) {
+      const selectedTypes = getSelectedTypes().filter(v => v !== 'Exclus');
+      return rows
+        .map(normalizeRowForCurrentMapping)
+        .filter(r => selectedTypes.includes(r.typeEntreprise || 'Interne'));
+    }
+
+    function updateFilteredPeriodStats(filteredPast, filteredFuture) {
+      document.getElementById('pastEvents').textContent = filteredPast.length;
+      document.getElementById('pastHours').textContent = hoursFromMs(totalMs(filteredPast));
+      document.getElementById('futureEvents').textContent = filteredFuture.length;
+      document.getElementById('futureHours').textContent = hoursFromMs(totalMs(filteredFuture));
+    }
+
+    function renderAllFromResult(result) {
+      const selectedTypes = getSelectedTypes();
+      const showExcluded = selectedTypes.includes('Exclus');
+      const showFuturs = selectedTypes.includes('Futurs');
+
+      const filteredPast = filterRowsBySelectedTypes(result.past);
+      const filteredFuture = showFuturs ? filterRowsBySelectedTypes(result.future) : [];
+
+      const filteredPastPivot = summarizePivot(filteredPast);
+      const filteredFuturePivot = summarizePivot(filteredFuture);
+
+      renderPivotTable(filteredPastPivot, '#pastTable tbody');
+      renderPivotTable(filteredFuturePivot, '#futureTable tbody');
+      updateFilteredPeriodStats(filteredPast, filteredFuture);
+
+      const futureSection = document.getElementById('futureSection');
+      const periodsContainer = document.getElementById('analysisBlocks');
+      if (futureSection) {
+        futureSection.style.display = showFuturs ? '' : 'none';
+      }
+      if (periodsContainer) {
+        if (showFuturs) {
+          periodsContainer.classList.remove('single');
+        } else {
+          periodsContainer.classList.add('single');
+        }
+      }
+
+      const excludedRows = showExcluded ? (result.excluded || []) : [];
+      renderExcludedTable(excludedRows);
+      updateExcludedStats(excludedRows, showExcluded);
+    }
+
+    function updateStats(result) {
+      const companies = new Set(result.rows.map(r => (r.entreprise || '').trim()).filter(Boolean));
+      document.getElementById('statEvents').textContent = result.rows.length;
+      document.getElementById('statCompanies').textContent = companies.size;
+      document.getElementById('statHours').textContent = hoursFromMs(totalMs(result.rows));
+      document.getElementById('statPeriod').textContent = `${formatDate(result.cutoff)} → ${formatDate(result.now)}`;
+
+      document.getElementById('pastEvents').textContent = result.past.length;
+      document.getElementById('pastHours').textContent = hoursFromMs(totalMs(result.past));
+      document.getElementById('futureEvents').textContent = result.future.length;
+      document.getElementById('futureHours').textContent = hoursFromMs(totalMs(result.future));
+      document.getElementById('pastLabel').textContent = `${formatDate(result.cutoff)} → ${formatDate(result.now)} (jusqu’à aujourd’hui)`;
+      document.getElementById('futureLabel').textContent = result.maxFutureDate
+        ? `Après le ${formatDate(result.now)} jusqu’au ${formatDate(result.maxFutureDate)}`
+        : `Après le ${formatDate(result.now)} : aucun rendez-vous`;
+
+      stats.style.display = 'grid';
+      const globalFiltersCard = document.getElementById('globalFiltersCard');
+      if (globalFiltersCard) globalFiltersCard.style.display = 'block';
+      analysisBlocks.style.display = 'grid';
+    }
+
+    function buildPivot(rows) {
+      const map = {};
+      rows.forEach(r => {
+        const key = `${r.entreprise || 'Interne'}|${r.typeEntreprise || 'Inconnu'}`;
+        if (!map[key]) {
+          map[key] = {
+            entreprise: r.entreprise || 'Interne',
+            typeEntreprise: r.typeEntreprise || 'Inconnu',
+            count: 0,
+            minutes: 0
+          };
+        }
+        map[key].count += 1;
+        map[key].minutes += r.dureeMinutes || 0;
+      });
+      return Object.values(map).sort((a,b)=>b.minutes-a.minutes);
+    }
+
+    function buildSpreadsheetXml(result) {
+      if (typeof XLSX === 'undefined') {
+        throw new Error('La librairie XLSX n’est pas disponible. Une connexion Internet est nécessaire pour générer le fichier .xlsx.');
+      }
+
+      const rows = (result.rows || []).map(normalizeRowForCurrentMapping);
+      const pastRows = (result.past || []).map(normalizeRowForCurrentMapping);
+      const includeFuture = getSelectedTypes().includes('Futurs');
+      const futureRows = includeFuture ? (result.future || []).map(normalizeRowForCurrentMapping) : [];
+      const exportRows = includeFuture ? rows : pastRows;
+
+      function excelDateOnly(d) {
+        if (!(d instanceof Date) || isNaN(d)) return '';
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+
+      function setCols(ws, widths) {
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+      }
+
+      const ACD = {
+        navy: '1F4E78',
+        navyDark: '0F2D4A',
+        lightBlue: 'EAF2FB',
+        subtotalBlue: 'DCE6F1',
+        border: 'D6D9E0',
+        white: 'FFFFFF',
+        text: '203040'
+      };
+
+      function makeStyle(fill, options = {}) {
+        return {
+          font: {
+            name: 'Segoe UI',
+            sz: 10,
+            bold: !!options.bold,
+            color: { rgb: options.fontColor || ACD.text }
+          },
+          fill: fill ? { patternType: 'solid', fgColor: { rgb: fill } } : undefined,
+          alignment: {
+            vertical: 'center',
+            horizontal: options.align || 'left',
+            wrapText: !!options.wrap
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: ACD.border } },
+            bottom: { style: 'thin', color: { rgb: ACD.border } },
+            left: { style: 'thin', color: { rgb: ACD.border } },
+            right: { style: 'thin', color: { rgb: ACD.border } }
+          },
+          numFmt: options.numFmt || undefined
+        };
+      }
+
+      const STYLE_HEADER = makeStyle(ACD.navy, { bold: true, fontColor: ACD.white, align: 'center' });
+      const STYLE_SECTION = makeStyle(ACD.lightBlue, { bold: true });
+      const STYLE_SUBTOTAL = makeStyle(ACD.subtotalBlue, { bold: true });
+      const STYLE_SUBTOTAL_NUM = makeStyle(ACD.subtotalBlue, { bold: true, numFmt: '0.0' });
+      const STYLE_TOTAL = makeStyle(ACD.navyDark, { bold: true, fontColor: ACD.white });
+      const STYLE_TOTAL_NUM = makeStyle(ACD.navyDark, { bold: true, fontColor: ACD.white, numFmt: '0.0' });
+      const STYLE_DATE = makeStyle(null, { numFmt: 'dd/mm/yyyy' });
+      const STYLE_NUM1 = makeStyle(null, { numFmt: '0.0' });
+
+      function styleRow(ws, rowNumber, styleMap) {
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const addr = XLSX.utils.encode_cell({ r: rowNumber - 1, c });
+          if (ws[addr]) ws[addr].s = styleMap(c + 1) || ws[addr].s;
+        }
+      }
+
+      function styleDataDateColumn(ws, startRow, endRow, colIndex) {
+        for (let r = startRow; r <= endRow; r++) {
+          const addr = XLSX.utils.encode_cell({ r: r - 1, c: colIndex - 1 });
+          if (ws[addr]) ws[addr].s = STYLE_DATE;
+        }
+      }
+
+      function styleDataNumColumn(ws, startRow, endRow, colIndex) {
+        for (let r = startRow; r <= endRow; r++) {
+          const addr = XLSX.utils.encode_cell({ r: r - 1, c: colIndex - 1 });
+          if (ws[addr]) ws[addr].s = STYLE_NUM1;
+        }
+      }
+
+      function aggregateByCompany(rowsSet, typeEntreprise) {
+        const map = new Map();
+        rowsSet
+          .filter(r => (r.typeEntreprise || 'Interne') === typeEntreprise)
+          .forEach(r => {
+            const key = r.entreprise || 'Interne';
+            if (!map.has(key)) map.set(key, { entreprise: key, typeEntreprise, count: 0, hours: 0 });
+            const item = map.get(key);
+            item.count += 1;
+            item.hours += Number(r.dureeMinutes || 0) / 60;
+          });
+        return Array.from(map.values()).sort((a, b) => b.hours - a.hours || b.count - a.count || a.entreprise.localeCompare(b.entreprise, 'fr', { sensitivity: 'base' }));
+      }
+
+      function summarizeMonthType(rowsSet) {
+        const map = new Map();
+        rowsSet.forEach(r => {
+          if (!(r.start instanceof Date) || isNaN(r.start)) return;
+          const month = monthLabel(r.start);
+          const type = r.typeEntreprise || 'Interne';
+          const keyMonth = `${r.start.getFullYear()}-${pad(r.start.getMonth() + 1)}`;
+          const key = `${keyMonth}||${type}`;
+          if (!map.has(key)) map.set(key, { month, typeEntreprise: type, count: 0, hours: 0, keyMonth });
+          const item = map.get(key);
+          item.count += 1;
+          item.hours += Number(r.dureeMinutes || 0) / 60;
+        });
+        return Array.from(map.values());
+      }
+
+      function subtotalFormula(colLetter, startRow, endRow) {
+        return `SUBTOTAL(9,${colLetter}${startRow}:${colLetter}${endRow})`;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      // Rendez-vous professionnel
+      const professionalAoa = [[
+        'Date', 'Heure début', 'Durée (min)', 'Heure fin', 'Entreprise', 'TypeEntreprise', 'Catégorie', 'Sujet', 'Type', 'Passé'
+      ]];
+
+      exportRows.forEach(r => {
+        const isPast = !!(r.start && r.start <= new Date());
+        professionalAoa.push([
+          excelDateOnly(r.start),
+          r.heureDebut || '',
+          Number(r.dureeMinutes || 0),
+          r.heureFin || '',
+          r.entreprise || '',
+          r.typeEntreprise || '',
+          r.categorie || '',
+          r.sujet || '',
+          r.type || '',
+          isPast ? 'Oui' : 'Non'
+        ]);
+      });
+
+      professionalAoa.push([]);
+      const professionalTotalRow = professionalAoa.length + 1;
+      professionalAoa.push([
+        'TOTAL',
+        '',
+        exportRows.length ? { f: subtotalFormula('C', 2, exportRows.length + 1) } : 0,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        ''
+      ]);
+
+      const wsProfessional = XLSX.utils.aoa_to_sheet(professionalAoa);
+      wsProfessional['!autofilter'] = { ref: `A1:J${Math.max(1, exportRows.length + 1)}` };
+      setCols(wsProfessional, [12, 12, 12, 12, 24, 18, 20, 40, 18, 10]);
+      styleRow(wsProfessional, 1, () => STYLE_HEADER);
+      if (exportRows.length) styleDataDateColumn(wsProfessional, 2, exportRows.length + 1, 1);
+      styleRow(wsProfessional, professionalTotalRow, col => col === 3 ? STYLE_TOTAL_NUM : STYLE_TOTAL);
+      XLSX.utils.book_append_sheet(wb, wsProfessional, 'Rendez-vous professionnel');
+
+      function buildSyntheseSheet(typeEntreprise) {
+        const aoa = [];
+        aoa.push(['Événements passés', '', '', '']);
+        aoa.push(['Entreprise', 'TypeEntreprise', 'Rendez-vous', 'Temps total (h)']);
+        const pastItems = aggregateByCompany(pastRows, typeEntreprise);
+        const pastHeaderRow = 2;
+        const pastDataStart = 3;
+        pastItems.forEach(item => aoa.push([item.entreprise, item.typeEntreprise, item.count, +item.hours.toFixed(1)]));
+        const pastDataEnd = aoa.length;
+        aoa.push([]);
+        const pastTotalRow = aoa.length + 1;
+        aoa.push([
+          'TOTAL',
+          '',
+          pastItems.length ? { f: subtotalFormula('C', pastDataStart, pastDataEnd) } : 0,
+          pastItems.length ? { f: subtotalFormula('D', pastDataStart, pastDataEnd) } : 0
+        ]);
+
+        let futureHeaderRow = null;
+        let futureDataStart = null;
+        let futureDataEnd = null;
+        let futureTotalRow = null;
+
+        if (includeFuture) {
+          aoa.push([]);
+          aoa.push(['Événements futurs', '', '', '']);
+          futureHeaderRow = aoa.length + 1;
+          aoa.push(['Entreprise', 'TypeEntreprise', 'Rendez-vous', 'Temps total (h)']);
+          futureDataStart = aoa.length + 1;
+          const futureItems = aggregateByCompany(futureRows, typeEntreprise);
+          futureItems.forEach(item => aoa.push([item.entreprise, item.typeEntreprise, item.count, +item.hours.toFixed(1)]));
+          futureDataEnd = aoa.length;
+          aoa.push([]);
+          futureTotalRow = aoa.length + 1;
+          aoa.push([
+            'TOTAL',
+            '',
+            futureItems.length ? { f: subtotalFormula('C', futureDataStart, futureDataEnd) } : 0,
+            futureItems.length ? { f: subtotalFormula('D', futureDataStart, futureDataEnd) } : 0
+          ]);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!autofilter'] = { ref: `A${pastHeaderRow}:D${Math.max(pastHeaderRow, pastDataEnd)}` };
+        setCols(ws, [24, 18, 14, 18]);
+
+        styleRow(ws, 1, () => STYLE_SECTION);
+        styleRow(ws, pastHeaderRow, () => STYLE_HEADER);
+        if (pastItems.length) styleDataNumColumn(ws, pastDataStart, pastDataEnd, 4);
+        styleRow(ws, pastTotalRow, col => col === 4 ? STYLE_TOTAL_NUM : STYLE_TOTAL);
+
+        if (includeFuture && futureHeaderRow) {
+          styleRow(ws, futureHeaderRow - 1, () => STYLE_SECTION);
+          styleRow(ws, futureHeaderRow, () => STYLE_HEADER);
+          if (futureDataEnd >= futureDataStart) styleDataNumColumn(ws, futureDataStart, futureDataEnd, 4);
+          styleRow(ws, futureTotalRow, col => col === 4 ? STYLE_TOTAL_NUM : STYLE_TOTAL);
+        }
+
+        return ws;
+      }
+
+      ['Editeur', 'Client', 'Interne'].forEach(typeEntreprise => {
+        XLSX.utils.book_append_sheet(wb, buildSyntheseSheet(typeEntreprise), `Synthèse ${typeEntreprise}`);
+      });
+
+      function buildRepartitionSheet(rowsSet, future) {
+        const items = summarizeMonthType(rowsSet);
+        const typeOrder = { 'Editeur': 1, 'Client': 2, 'Interne': 3 };
+        const months = Array.from(new Set(items.map(i => i.keyMonth))).sort((a, b) => future ? a.localeCompare(b) : b.localeCompare(a));
+        const aoa = [['Mois', 'TypeEntreprise', 'Rendez-vous', 'Temps total (h)']];
+        const headerRow = 1;
+        const subtotalRows = [];
+        const dataRowsForFilterEnd = [];
+
+        months.forEach(monthKey => {
+          const monthItems = items.filter(i => i.keyMonth === monthKey).sort((a, b) => (typeOrder[a.typeEntreprise] || 99) - (typeOrder[b.typeEntreprise] || 99));
+          const monthLabelValue = monthItems[0]?.month || '';
+          const monthStart = aoa.length + 1;
+          monthItems.forEach(item => {
+            aoa.push([monthLabelValue, item.typeEntreprise, item.count, +item.hours.toFixed(1)]);
+            dataRowsForFilterEnd.push(aoa.length);
+          });
+          const monthEnd = aoa.length;
+          aoa.push([
+            `Sous-total ${monthLabelValue}`,
+            '',
+            monthItems.length ? { f: subtotalFormula('C', monthStart, monthEnd) } : 0,
+            monthItems.length ? { f: subtotalFormula('D', monthStart, monthEnd) } : 0
+          ]);
+          subtotalRows.push(aoa.length);
+          aoa.push([]);
+        });
+
+        const totalRow = aoa.length + 1;
+        aoa.push([
+          'TOTAL',
+          '',
+          items.length ? { f: subtotalFormula('C', 2, Math.max(2, totalRow - 2)) } : 0,
+          items.length ? { f: subtotalFormula('D', 2, Math.max(2, totalRow - 2)) } : 0
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!autofilter'] = { ref: `A1:D${Math.max(1, dataRowsForFilterEnd.length ? Math.max(...dataRowsForFilterEnd) : 1)}` };
+        setCols(ws, [18, 18, 14, 18]);
+
+        styleRow(ws, headerRow, () => STYLE_HEADER);
+        subtotalRows.forEach(r => styleRow(ws, r, col => col === 4 ? STYLE_SUBTOTAL_NUM : STYLE_SUBTOTAL));
+        styleRow(ws, totalRow, col => col === 4 ? STYLE_TOTAL_NUM : STYLE_TOTAL);
+        if (dataRowsForFilterEnd.length) styleDataNumColumn(ws, 2, Math.max(...dataRowsForFilterEnd), 4);
+
+        return ws;
+      }
+
+      XLSX.utils.book_append_sheet(wb, buildRepartitionSheet(pastRows, false), 'Répartition passée');
+      if (includeFuture) {
+        XLSX.utils.book_append_sheet(wb, buildRepartitionSheet(futureRows, true), 'Répartition à venir');
+      }
+
+      return wb;
+    }
+
+
+    async function getIcsText() {
+      const file = icsFile && icsFile.files ? icsFile.files[0] : null;
+
+      if (!file) {
+        throw new Error('Aucun fichier ICS sélectionné');
+      }
+
+      return await file.text();
+    }
+
+    function downloadExcel(result) {
+      const wb = buildSpreadsheetXml(result);
+      const months = Number(monthsInput.value || 2);
+      XLSX.writeFile(wb, `rendez_vous_professionnels_${months}_mois.xlsx`);
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      const months = Number(monthsInput.value || 6);
+      if (!months || months < 1) {
+        statusEl.innerHTML = '<span class="warn">Merci d’indiquer un nombre de mois valide.</span>';
+        downloadBtn.disabled = true;
+        downloadBtn.classList.add('export-btn-hidden');
+        return;
+      }
+
+      try {
+        const text = await getIcsText();
+        const result = parseEvents(text, months); window._lastResult = result;
+        currentRows = result.rows;
+        syncClientMappingFromCategory(currentRows);
+        updateStats(result);
+        renderAllFromResult(result);
+        downloadBtn.disabled = currentRows.length === 0;
+        downloadBtn.classList.toggle('export-btn-hidden', currentRows.length === 0);
+        statusEl.innerHTML = `<span class="ok">Analyse terminée.</span> ${currentRows.length} rendez-vous business détectés sur la période analysée.`;
+        debugEl.textContent = `Blocs VEVENT trouvés : ${result.veventCount} | Événements datés : ${result.totalEvents} | Événements à partir du ${formatDate(result.cutoff)} : ${result.filteredByDate}`;
+      } catch (err) {
+        console.error(err);
+        statusEl.innerHTML = '<span class="warn">Erreur lors du chargement ou de l’analyse du flux ICS.</span>';
+        downloadBtn.disabled = true;
+        downloadBtn.classList.add('export-btn-hidden');
+        debugEl.textContent = String(err);
+      }
+    });
+
+    downloadBtn.classList.add('export-btn-hidden');
+
+    downloadBtn.addEventListener('click', () => {
+      if (!currentRows.length || !window._lastResult) return;
+      downloadExcel(window._lastResult);
+    });
+
+    renderMappingTable();
+    renderExclusionTable();
+    updateMappingUiState();
+    updateExclusionUiState();
+    updateSettingsUiState();
+    updateClientsUi();
+    updateExclusionsUi();
+  function syncFilterBadges() {
+  document.querySelectorAll('.filter-badge').forEach(badge => {
+    const cb = badge.querySelector('.type-filter');
+    badge.classList.toggle('inactive', !cb.checked);
+  });
+}
+
+function setTypeFilterState(type, checked) {
+  document.querySelectorAll(`.type-filter[value="${type}"]`).forEach(cb => {
+    cb.checked = checked;
+  });
+  syncFilterBadges();
+}
+
+function rerenderPivotTables() {
+  if (window._lastResult) {
+    renderAllFromResult(window._lastResult);
+  }
+}
+
+document.querySelectorAll('.filter-badge').forEach(badge => {
+  badge.addEventListener('click', (e) => {
+    e.preventDefault();
+    const cb = badge.querySelector('.type-filter');
+    const nextChecked = !cb.checked;
+    setTypeFilterState(cb.value, nextChecked);
+    rerenderPivotTables();
+  });
+});
+
+document.querySelectorAll('.type-filter').forEach(cb => {
+  cb.addEventListener('change', () => {
+    setTypeFilterState(cb.value, cb.checked);
+    rerenderPivotTables();
+  });
+});
+
+
+rdvDetailCloseBtn.addEventListener('click', closeRdvDetailModal);
+rdvDetailExportBtn.addEventListener('click', exportDetailRowsToExcel);
+rdvDetailToggle.addEventListener('change', () => {
+  if (!rdvDetailToggle.checked) {
+    currentSelectedEntreprise = null;
+  }
+  renderRdvDetailTable();
+});
+rdvDetailModal.addEventListener('click', (e) => {
+  if (e.target === rdvDetailModal) closeRdvDetailModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeRdvDetailModal();
+});
+
+document.querySelectorAll('.toggle-all-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const selector = btn.dataset.target;
+    const shouldExpand = btn.textContent.trim() === 'Tout déplier';
+    setAllMonthsExpanded(selector, shouldExpand);
+  });
+});
+
+syncFilterBadges();
+
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('rulesInfoBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      document.getElementById('rulesModal').classList.add('open');
+    });
+  }
+});
+
+function closeRulesModal() {
+  document.getElementById('rulesModal').classList.remove('open');
+}
+
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+
+  const raw = btn.getAttribute('data-emails') || '';
+  const cleaned = raw
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean)
+    .join(', ');
+
+  try {
+    await navigator.clipboard.writeText(cleaned);
+    const oldText = btn.textContent;
+    btn.textContent = '✅';
+    setTimeout(() => {
+      btn.textContent = oldText;
+    }, 1200);
+  } catch (err) {
+    console.error('Copie impossible', err);
+  }
+});
+
+
+document.getElementById('icsFile').addEventListener('change', function (e) {
+  const file = e.target.files && e.target.files[0];
+  const status = document.getElementById('icsUploadStatus');
+
+  if (status) {
+    if (!file) {
+      status.className = 'ics-status';
+      status.innerHTML = '';
+      return;
+    }
+    status.className = 'ics-status loading';
+    status.innerHTML = '<span class="spinner"></span>Lecture du fichier en cours...';
+  }
+
+  setTimeout(() => {
+    if (status && file) {
+      status.className = 'ics-status success';
+      status.textContent = `Fichier chargé ✔️ (${file.name})`;
+    }
+    if (typeof analyzeBtn !== 'undefined' && analyzeBtn) {
+      analyzeBtn.click();
+    }
+  }, 50);
+});
+</script>
+
+<div id="rulesModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Règles métier</h3>
+      <button onclick="closeRulesModal()" class="inline-action-btn">Fermer</button>
+    </div>
+    <div class="modal-body">
+      <ul>
+        <li>Si la catégorie contient <b>Client</b> → TypeEntreprise = Client</li>
+        <li>Si la catégorie contient <b>Editeur</b> → TypeEntreprise = Editeur</li>
+        <li>Si la catégorie contient <b>Interne</b> → TypeEntreprise = Interne (Entreprise = Interne)</li>
+        <li>Ces règles sont prioritaires sur toutes les autres</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
